@@ -56,7 +56,8 @@ def combine_datasets(
     llama_nemo_dir: str = ".",
     output_dir: str = ".",
     val_split: float = 0.03,
-    max_tokens: int = 16384  # Default to 16k token limit
+    max_tokens: int = 16384,  # Default to 16k token limit
+    max_samples: int = None  # New parameter to limit total samples
 ) -> None:
     """
     Combine safety dataset and Llama Nemotron dataset files, and create train/val splits.
@@ -67,6 +68,7 @@ def combine_datasets(
         output_dir: Directory to save output files
         val_split: Proportion of data to use for validation (default: 3%)
         max_tokens: Maximum number of tokens allowed per sample (default: 16384)
+        max_samples: Maximum number of total samples to process (default: None, process all)
     """
     combined_data = []
     item_id = 0  # Counter for consistent numeric IDs
@@ -88,6 +90,8 @@ def combine_datasets(
     safety_data = []
     with open(safety_file, 'r') as f:
         for line in f:
+            if max_samples and total_samples >= max_samples:
+                break
             total_samples += 1
             stats["safety_dataset"]["total"] += 1
             try:
@@ -95,6 +99,24 @@ def combine_datasets(
                 # Standardize format
                 input_text = str(item.get("prompt", item.get("input", ""))).strip()
                 output_text = str(item.get("response", item.get("output", item.get("chosen_response", "")))).strip()
+                prompt_label = str(item.get("prompt_label", item.get("label", "unknown"))).lower()
+                
+                # Extract categories for all prompts
+                categories = []
+                # Try to get categories from various possible fields
+                raw_categories = item.get("categories", item.get("safety_categories", item.get("unsafe_categories", [])))
+                if isinstance(raw_categories, str):
+                    categories = [c.strip().lower() for c in raw_categories.split(",")]
+                elif isinstance(raw_categories, list):
+                    categories = [str(c).strip().lower() for c in raw_categories]
+                
+                # For unsafe prompts, ensure we have at least one category
+                if prompt_label != "safe" and not categories:
+                    # If no categories found but prompt is unsafe, use the label as a category
+                    categories = [prompt_label]
+                # For safe prompts, if no categories found, use "safe" as category
+                elif prompt_label == "safe" and not categories:
+                    categories = ["safe"]
                 
                 # Count tokens
                 input_tokens = count_tokens(input_text)
@@ -123,7 +145,9 @@ def combine_datasets(
                         "split": "train",
                         "token_count": total_tokens,
                         "input_tokens": input_tokens,
-                        "output_tokens": output_tokens
+                        "output_tokens": output_tokens,
+                        "prompt_label": prompt_label,  # Track prompt label in metadata
+                        "categories": categories  # Track categories in metadata
                     }
                 }
                 # Only add if we have both input and output
@@ -131,6 +155,7 @@ def combine_datasets(
                     safety_data.append(transformed_item)
                     item_id += 1
                     stats["safety_dataset"]["samples"] += 1
+                    
             except json.JSONDecodeError:
                 print(f"Warning: Skipping invalid JSON line in safety dataset")
             except Exception as e:
@@ -144,6 +169,8 @@ def combine_datasets(
     print(f"\nFound {len(llama_nemo_files)} Llama-Nemotron files: {llama_nemo_files}")
     
     for file_path in llama_nemo_files:
+        if max_samples and total_samples >= max_samples:
+            break
         source_name = os.path.basename(file_path).split('.')[0]
         
         # Skip the safety dataset file as we already loaded it
@@ -282,6 +309,36 @@ def combine_datasets(
     for source, count in sorted(val_source_counts.items(), key=lambda x: x[1], reverse=True):
         print(f"{source}: {count} ({count/len(val_data):.1%})")
 
+    # Add prompt label and category statistics at the end
+    print("\nPrompt Label Statistics:")
+    label_counts = defaultdict(int)
+    category_counts = defaultdict(int)
+    label_category_counts = defaultdict(lambda: defaultdict(int))  # Track categories per label
+    
+    for item in safety_data:
+        label = item["metadata"]["prompt_label"]
+        categories = item["metadata"]["categories"]
+        label_counts[label] += 1
+        
+        # Count categories
+        for category in categories:
+            category_counts[category] += 1
+            label_category_counts[label][category] += 1
+    
+    print("\nLabel Distribution:")
+    for label, count in sorted(label_counts.items(), key=lambda x: x[1], reverse=True):
+        print(f"{label}: {count} samples ({count/len(safety_data):.1%})")
+    
+    print("\nCategory Distribution:")
+    for category, count in sorted(category_counts.items(), key=lambda x: x[1], reverse=True):
+        print(f"{category}: {count} samples")
+    
+    print("\nCategory Distribution by Label:")
+    for label in sorted(label_counts.keys()):
+        print(f"\n{label.upper()} prompts:")
+        for category, count in sorted(label_category_counts[label].items(), key=lambda x: x[1], reverse=True):
+            print(f"  {category}: {count} samples ({count/label_counts[label]:.1%})")
+
 if __name__ == "__main__":
     import argparse
     
@@ -296,6 +353,8 @@ if __name__ == "__main__":
                       help="Proportion of data to use for validation (default: 0.03)")
     parser.add_argument("--max_tokens", type=int, default=16384,
                       help="Maximum number of tokens allowed per sample (default: 16384)")
+    parser.add_argument("--max_samples", type=int, default=None,
+                      help="Maximum number of total samples to process (default: None, process all)")
     
     args = parser.parse_args()
     
@@ -304,5 +363,6 @@ if __name__ == "__main__":
         llama_nemo_dir=args.llama_nemo_dir,
         output_dir=args.output_dir,
         val_split=args.val_split,
-        max_tokens=args.max_tokens
+        max_tokens=args.max_tokens,
+        max_samples=args.max_samples
     ) 

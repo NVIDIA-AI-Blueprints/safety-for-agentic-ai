@@ -1,7 +1,8 @@
 #!/bin/bash
 # Base directory and cache setup
-BASE_DIR="/lustre/fsw/portfolios/llmservice/users/ahazare"
-export BASE_DIR
+export BASE_DIR="/lustre/fsw/portfolios/llmservice/users/ahazare"
+export LOG_DIR="$BASE_DIR/gtc_paris/logs"
+mkdir -p $LOG_DIR
 
 # Installation Requirements
 # cd $BASE_DIR
@@ -47,6 +48,7 @@ export POST_TRAINING_DATASET_NAME="nvidia/Llama-Nemotron-Post-Training-Dataset"
 export MODEL_NAME="deepseek-ai/DeepSeek-R1-Distill-Llama-8B"
 export SAFETY_MODEL_NAME="nvidia/llama-3.1-nemoguard-8b-content-safety"
 
+# Credentials
 export HF_TOKEN="*****************************"
 # huggingface-cli login --token $HF_TOKEN
 export WANDB_API_KEY="******************************"
@@ -54,7 +56,8 @@ export WANDB_API_KEY="******************************"
 # On-Policy Data Generation parameters
 export SAFETY_THRESHOLD=0.8
 export MAX_ATTEMPTS=3
-export BATCH_SIZE=32
+export BATCH_SIZE=64
+export CONCURRENCY=16
 export MAX_TOKENS=512
 export TEMPERATURE=0.7
 export TOP_P=0.9
@@ -101,35 +104,33 @@ files=(
 LLAMA_NEMO_DIR="$DATASET_CACHE_DIR/Llama-Nemotron-Post-Training-Dataset"
 mkdir -p "$LLAMA_NEMO_DIR"
 
-# Download files and extract 10k random samples from each
+# Download files and extract 1200 random samples from each
 for file in "${files[@]}"; do
     echo "Downloading $file..."
-    python -c "from huggingface_hub import hf_hub_download; path = hf_hub_download(repo_id='$POST_TRAINING_DATASET_NAME', filename='$file', repo_type='dataset', cache_dir='$DATASET_CACHE_DIR')"
+    # Download using huggingface_hub
+    downloaded_file=$(python3 -c "from huggingface_hub import hf_hub_download; print(hf_hub_download(repo_id='$POST_TRAINING_DATASET_NAME', filename='$file', repo_type='dataset', cache_dir='$DATASET_CACHE_DIR'))")
     
-    # Extract the filename (without path)
+    # Get the base filename
     filename=$(basename "$file")
-    # Find the downloaded file
-    downloaded_file=$(find "$DATASET_CACHE_DIR" -name "$filename")
-    if [ -n "$downloaded_file" ]; then
-        echo "Taking 10k random samples from $downloaded_file and saving to $LLAMA_NEMO_DIR/$filename"
+    target_file="$LLAMA_NEMO_DIR/$filename"
+    
+    if [ -f "$downloaded_file" ]; then
         # Count total lines in the file
-        total_lines=$(wc -l < "$downloaded_file")
-        echo "Total lines in file: $total_lines"
-        # Extract 10k random samples using shuf
-        if [ $total_lines -gt 1000 ]; then
-            shuf -n 1000 "$downloaded_file" > "$LLAMA_NEMO_DIR/$filename"
-            echo "Extracted 10k random samples to $LLAMA_NEMO_DIR/$filename"
+        total_lines=$(wc -l < "$downloaded_file" 2>/dev/null || echo "0")
+        if [ "$total_lines" -gt 1200 ]; then
+            shuf -n 1200 "$downloaded_file" > "$target_file"
+            echo "Extracted 1200 random samples to $target_file"
         else
-            # If file has fewer than 10k lines, take all of them
-            cp "$downloaded_file" "$LLAMA_NEMO_DIR/$filename"
-            echo "File has fewer than 10k lines, copied all $total_lines lines"
+            cp "$downloaded_file" "$target_file"
+            echo "File has fewer than 1200 lines, copied all $total_lines lines"
         fi
     else
-        echo "Could not find downloaded file for $file"
+        echo "Error: Could not find downloaded file for $file"
         exit 1
     fi
 done
-echo "All files downloaded and processed with random samples"
+
+echo "All files downloaded and processed successfully"
 
 # 3. Combine two datasets to create a dataset blend
 OUTPUT_DIR="$DATASET_CACHE_DIR/sft_data"
@@ -138,7 +139,8 @@ python3 combine_datasets.py \
     --llama_nemo_dir "$DATASET_CACHE_DIR/Llama-Nemotron-Post-Training-Dataset" \
     --output_dir "$OUTPUT_DIR" \
     --val_split 0.03 \
-    --max_tokens 16384 # Filtering to skip OOM issues while training
+    --max_tokens 16384 \
+    --max_samples 5000
 
 echo "Datasets combined and split into train/val successfully"
 
@@ -146,18 +148,20 @@ echo "Datasets combined and split into train/val successfully"
 export VLLM_ENGINE_ITERATION_TIMEOUT_S=36000
 export VLLM_ALLOW_LONG_MAX_MODEL_LEN=1
 export VLLM_HOST="0.0.0.0"
-export VLLM_TENSOR_PARALLEL_SIZE=2
+export VLLM_TENSOR_PARALLEL_SIZE=1
 
 # GPU Configuration
-export POLICY_MODEL_GPUS="0,1"  # GPUs for policy model (comma-separated)
-export SAFETY_MODEL_GPUS="2,3"  # GPUs for safety model (comma-separated)
+export POLICY_MODEL_GPUS="0,1,2,3" # GPUs for policy model (comma-separated)
+export SAFETY_MODEL_GPUS="4,5"   # GPUs for safety model (comma-separated)
 
 echo "Using GPUs $POLICY_MODEL_GPUS for policy model"
 echo "Using GPUs $SAFETY_MODEL_GPUS for safety model"
 
 # Kill any existing vLLM servers
 pkill -f "vllm.entrypoints.openai.api_server"
+sleep 5
 
+echo "Starting policy model server"
 # 4. Start vLLM server for policy model
 CUDA_VISIBLE_DEVICES=$POLICY_MODEL_GPUS python3 -m vllm.entrypoints.openai.api_server \
   --model "$MODEL_NAME" \
@@ -166,11 +170,10 @@ CUDA_VISIBLE_DEVICES=$POLICY_MODEL_GPUS python3 -m vllm.entrypoints.openai.api_s
   --host "$VLLM_HOST" \
   --port 5000 \
   --served-model-name "test-model" \
+  --enable-reasoning \
+  --reasoning-parser deepseek_r1 \
   --tensor-parallel-size "$VLLM_TENSOR_PARALLEL_SIZE" \
-  --download-dir="$HF_HOME" &> "$BASE_DIR/vllm-server-model.log" &
-
-echo Sleeping for 120 seconds to wait for policy model server to start
-sleep 120  # Wait for policy model server to start
+  --download-dir="$HF_HOME" &> "$LOG_DIR/vllm-server-model.log" &
 
 echo Starting safety model server
 # 4. Start vLLM server for safety model
@@ -183,9 +186,9 @@ CUDA_VISIBLE_DEVICES=$SAFETY_MODEL_GPUS python3 -m vllm.entrypoints.openai.api_s
   --port 6000 \
   --served-model-name "safety-model" \
   --tensor-parallel-size "$VLLM_TENSOR_PARALLEL_SIZE" \
-  --download-dir="$HF_HOME" &> "$BASE_DIR/vllm-server-safety.log" &
+  --download-dir="$HF_HOME" &> "$LOG_DIR/vllm-server-safety.log" &
 
-sleep 120  # Wait for safety model server to start
+sleep 120  # Wait for Policy and Safety model servers to start
 
 # 5. Generate on-policy data for safety prompts using DS-R1-Distill-Llama-8B
 # Set input and output paths
@@ -201,14 +204,15 @@ python3 generate_on_policy_data.py \
   --vllm_host "$VLLM_HOST" \
   --vllm_model_port 5000 \
   --vllm_safety_port 6000 \
+  --concurrency "$CONCURRENCY" \
   --input_dataset "$INPUT_DATASET" \
   --output "$OUTPUT_FILE" \
   --batch_size "$BATCH_SIZE" \
   --max_tokens "$MAX_TOKENS" \
   --temperature "$TEMPERATURE" \
-  --top_p "$TOP_P" &> "$BASE_DIR/vllm-server-safety-train.log" &
+  --top_p "$TOP_P" &> "$LOG_DIR/vllm-server-safety-train.log" &
 
-
+wait
 echo "Generation completed. Results saved to $OUTPUT_FILE"
 
 # Also generate for validation set
@@ -226,14 +230,14 @@ python3 generate_on_policy_data.py \
   --vllm_host "$VLLM_HOST" \
   --vllm_model_port 5000 \
   --vllm_safety_port 6000 \
+  --concurrency "$CONCURRENCY" \
   --input_dataset "$INPUT_DATASET_VAL" \
   --output "$OUTPUT_FILE_VAL" \
   --batch_size "$BATCH_SIZE" \
   --max_tokens "$MAX_TOKENS" \
   --temperature "$TEMPERATURE" \
-  --top_p "$TOP_P" &> "$BASE_DIR/vllm-server-safety-val.log" &
-
-
+  --top_p "$TOP_P" &> "$LOG_DIR/vllm-server-safety-val.log" &
+wait
 echo "Generation for validation set completed. Results saved to $OUTPUT_FILE_VAL"
 
 # Cleanup vLLM servers after generation is complete
@@ -242,37 +246,38 @@ pkill -f "vllm.entrypoints.openai.api_server"
 
 # 6. Use NeMo-RL to run SFT
 # Install NeMo-Rl
-# cd $BASE_DIR/NeMo-RL
-# TMPDIR=$RAY_TMPDIR uv run python examples/run_sft.py --config $BASE_DIR/gtc_paris/deepseek_sft.yaml &> $BASE_DIR/NeMo-RL/results/sft_deepseek_8b_step_300/sft.log
+cd $BASE_DIR/NeMo-RL
+MODEL_DIR="$BASE_DIR/NeMo-RL/results/sft_deepseek_8b_trial_step_300/"
+TMPDIR=$RAY_TMPDIR uv run python examples/run_sft.py --config $BASE_DIR/gtc_paris/deepseek_sft.yaml &> $LOG_DIR/sft.log
 
-# # 7. Convert checkpoint from DCP to HF
-# # Path to your NeMo-RL checkpoint
-# MODEL_DIR="$BASE_DIR/NeMo-RL/results/sft_deepseek_8b_step_300" # TODO: Change to the latest checkpoint
-# # Input path
-# DCP_CKPT_PATH="$MODEL_DIR/policy/weights/"
-# CONFIG_PATH="$MODEL_DIR/config.yaml"
-# # Output path
-# HF_CKPT_PATH="$MODEL_DIR/hf_ckpt"
+# 7. Convert checkpoint from DCP to HF
+# Path to your NeMo-RL checkpoint
+MODEL_DIR="$BASE_DIR/NeMo-RL/results/sft_deepseek_8b_step_300" # TODO: Change to the latest checkpoint
+# Input path
+DCP_CKPT_PATH="$MODEL_DIR/policy/weights/"
+CONFIG_PATH="$MODEL_DIR/config.yaml"
+# Output path
+HF_CKPT_PATH="$MODEL_DIR/hf_ckpt"
 
-# echo "Starting conversion process..."
-# cd $BASE_DIR/NeMo-RL
-# uv run examples/convert_dcp_to_hf.py \
-#     --config $CONFIG_PATH \
-#     --dcp-ckpt-path $DCP_CKPT_PATH \
-#     --hf-ckpt-path $HF_CKPT_PATH 
+echo "Starting conversion process..."
+cd $BASE_DIR/NeMo-RL
+uv run examples/convert_dcp_to_hf.py \
+    --config $CONFIG_PATH \
+    --dcp-ckpt-path $DCP_CKPT_PATH \
+    --hf-ckpt-path $HF_CKPT_PATH 
 
-# # Verify conversion results
-# if [ -f "$HF_CKPT_PATH/pytorch_model.bin" ] && [ -f "$HF_CKPT_PATH/config.json" ]; then
-#     echo "Conversion successful! Files created:"
-#     ls -lh "$HF_CKPT_PATH"
-#     echo ""
-#     echo "The HuggingFace model is now available at: $HF_CKPT_PATH"
-# else
-#     echo "Conversion may have failed. Please check the output."
-# fi 
+# Verify conversion results
+if [ -f "$HF_CKPT_PATH/pytorch_model.bin" ] && [ -f "$HF_CKPT_PATH/config.json" ]; then
+    echo "Conversion successful! Files created:"
+    ls -lh "$HF_CKPT_PATH"
+    echo ""
+    echo "The HuggingFace model is now available at: $HF_CKPT_PATH"
+else
+    echo "Conversion may have failed. Please check the output."
+fi 
 
 
-
+# ------------------------------------------------------------------------------------------------
 
 # Notebook 3
 # 7. Run Baseline Evaluation - Start vLLM server
