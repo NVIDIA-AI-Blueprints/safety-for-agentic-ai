@@ -17,6 +17,10 @@ export BASE_DIR
 # pip install uv
 # uv sync
 
+# # Evaluation
+# pip install nvidia-simple-evals
+# pip install nvidia-lm-eval
+
 # Set environment variables to redirect temp files and caches to lustre
 export TMPDIR="$BASE_DIR/tmp"
 export XDG_CACHE_HOME="$BASE_DIR/cache"
@@ -271,10 +275,80 @@ pkill -f "vllm.entrypoints.openai.api_server"
 
 
 # Notebook 3
-# 7. Run Evaluation of SFT Model
-# TODO: Run Baseline Evaluation (Should be parallely run in the background)
+# 7. Run Baseline Evaluation - Start vLLM server
+export BASELINE_MODEL_GPUS="0,1"
+CUDA_VISIBLE_DEVICES=$BASELINE_MODEL_GPUS python3 -m vllm.entrypoints.openai.api_server \
+  --model "$MODEL_NAME" \
+  --reasoning-parser "qwen3" \
+  --trust-remote-code \
+  --seed 1 \
+  --host "$VLLM_HOST" \
+  --port 5000 \
+  --served-model-name "baseline-model" \
+  --tensor-parallel-size "$VLLM_TENSOR_PARALLEL_SIZE" \
+  --download-dir="$HF_HOME" &> "$BASE_DIR/vllm-server-baseline-model.log" &
 
-# 8. Start vLLM server
+# 7. Run Baseline Evaluation - Run Evaluations in Background
+export MY_API_KEY="empty"
+export JUDGE_API_KEY="nvapi-XXXXXXXXXXXXXX"
+
+mkdir -p "$BASE_DIR/results/baseline-evals/gpqa-diamond"
+simple_evals \
+  --model "baseline-model" \
+  --url http://localhost:5000/v1/chat/completions \
+  --eval_name gpqa_diamond \
+  --temperature 0.6 \
+  --top_p 0.95 \
+  --max_tokens 8192 \
+  --out_dir "$BASE_DIR/results/baseline-evals/gpqa-diamond" \
+  --cache_dir "$BASE_DIR/results/baseline-evals/gpqa-diamond" \
+  --num_threads 4 \
+  --max_retries 5 \
+  --timeout 150 &> "$BASE_DIR/baseline-eval-gpqa-diamond.log" &
+
+mkdir -p "$BASE_DIR/results/baseline-evals/aa-aime-2024"
+simple_evals \
+  --model "baseline-model" \
+  --url http://localhost:5000/v1/chat/completions \
+  --eval_name AA_AIME_2024 \
+  --temperature 0.6 \
+  --top_p 0.95 \
+  --max_tokens 8192 \
+  --out_dir "$BASE_DIR/results/baseline-evals/aa-aime-2024" \
+  --cache_dir "$BASE_DIR/results/baseline-evals/aa-aime-2024" \
+  --num_threads 4 \
+  --max_retries 5 \
+  --timeout 150 &> "$BASE_DIR/baseline-eval-aa-aime-2024.log" &
+
+mkdir -p "$BASE_DIR/results/baseline-evals/aa-math-500"
+simple_evals \
+  --model "baseline-model" \
+  --url http://localhost:5000/v1/chat/completions \
+  --eval_name AA_math_test_500 \
+  --temperature 0.6 \
+  --top_p 0.95 \
+  --max_tokens 8192 \
+  --out_dir "$BASE_DIR/results/baseline-evals/aa-math-500" \
+  --cache_dir "$BASE_DIR/results/baseline-evals/aa-math-500" \
+  --num_threads 4 \
+  --max_retries 5 \
+  --timeout 150 &> "$BASE_DIR/baseline-eval-aa-math-500.log" &
+
+mkdir -p "$BASE_DIR/results/baseline-evals/ifeval"
+lm-eval \
+  --tasks ifeval \
+  --num_fewshot 0 \
+  --model local-chat-completions \
+  --model_args "base_url=http://localhost:5000/v1/chat/completions,model=baseline-model,tokenized_requests=false,,num_concurrent=4,max_gen_toks=8192,timeout=150,max_retries=5,stream=False" \
+  --log_samples \
+  --output_path "$BASE_DIR/results/baseline-evals/ifeval" \
+  --use_cache "$BASE_DIR/results/baseline-evals/ifeval" \
+  --fewshot_as_multiturn \
+  --apply_chat_template \
+  --gen_kwargs="temperature=0.6,top_p=0.95" &> "$BASE_DIR/baseline-eval-ifeval.log" &
+
+
+# 8. Run Evaluation of SFT Model - Start vLLM server
 # python3 -m vllm.entrypoints.openai.api_server \
 #   --model "$HF_CKPT_PATH" \
 #   --trust-remote-code \
