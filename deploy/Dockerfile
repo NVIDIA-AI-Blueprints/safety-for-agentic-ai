@@ -5,7 +5,7 @@ RUN pip install nvidia-simple-evals
 RUN pip install garak==0.11.0
 
 # *Requirements for post-training
-RUN pip install -U "huggingface_hub[cli]
+RUN pip install -U "huggingface_hub[cli]"
 RUN pip install vllm
 RUN pip install datasets
 
