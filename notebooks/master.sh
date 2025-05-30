@@ -81,11 +81,11 @@ export TOP_P=0.9
 
 
 # 1. Download NV Safety Dataset from HF Dataset Hub
-python3 download_safety_dataset.py \
-    --dataset_name "$SAFETY_DATASET_NAME" \
-    --filename "nemotron-safety-sft-training-blend-v1.0.jsonl" \
+python3 safety_dataset_blend_generation.py \
+    --filename "$DATASET_CACHE_DIR/nemo_safety_blend_v0.2.2.jsonl" \
     --total_samples 1000 \
-    --cache_dir "$DATASET_CACHE_DIR"
+    --sampling_method uniform \
+    --cache_dir "$DATASET_CACHE_DIR" \
 if [ $? -ne 0 ]; then
     echo "Error downloading NV Safety dataset"
     exit 1
