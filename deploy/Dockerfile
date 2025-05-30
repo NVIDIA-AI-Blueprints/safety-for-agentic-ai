@@ -2,6 +2,8 @@ FROM nvcr.io/nvidia/nemo:25.04
 
 # * Requirements for evaluation
 RUN pip install nvidia-simple-evals
+RUN pip install nvidia-lm-eval
+RUN pip install nvidia-bfcl
 RUN pip install garak==0.11.0
 
 # *Requirements for post-training
