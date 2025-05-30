@@ -8,9 +8,9 @@ RUN pip install garak==0.11.0
 RUN pip install -U "huggingface_hub[cli]"
 RUN pip install vllm
 RUN pip install datasets
-
-# Set the working directory
-WORKDIR /workspace
+RUN pip install protobuf==3.20
+RUN pip install wandb==0.16.6
+RUN pip install torchdata
 
 # Clone the repo
 RUN git clone https://github.com/NVIDIA/NeMo-RL.git
@@ -24,5 +24,3 @@ RUN pip install uv
 # Sync dependencies using uv
 RUN uv sync
 
-# Set the default command to launch JupyterLab
-CMD ["jupyter-lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root"] 
