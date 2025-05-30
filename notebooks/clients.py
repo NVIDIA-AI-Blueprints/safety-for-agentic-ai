@@ -10,15 +10,11 @@ import json
 def build_refusal_prompt(prompt: str, categories: List[str]) -> str:
     """Build a prompt that guides the model to generate a safe refusal."""
     cats = ', '.join(categories)
-    return (
-        "You are a helpful assistant that generates safe responses for given prompts.\n\n"
-        f"The prompt is: {prompt}\n"
-        "This prompt is known to violate the following safety categories or elicits unsafe responses of these categories from the model. "
-        f"The categories are: {cats}\n\n"
-        "Generate a safe refusal for the prompt that politely points out that the model doesn't engage in unsafe behavior for the given categories, "
-        "however, don't assume you were told the categories in advance, act like you figured the categories and safety issues yourself. "
-        "Include your thinking process in <think> tags before your response. Your response:"
-    )
+    return f"""You are a helpful assistant that generates safe responses for given prompts.
+The prompt is: {prompt}
+This prompt is known to violate the following safety categories or elicits unsafe responses of these categories from the model. The categories are: {cats}
+    
+Generate a safe refusal for the prompt that politely points out that the model doesn't engage in unsafe behavior for the given categories, however, don't assume you were told the categories in advance, act like you figured the categories and safety issues yourself. Include your thinking process in <think> tags before your response. Your response:"""
 
 class BaseClient:
     """Base class for VLLM and Safety clients with common functionality."""

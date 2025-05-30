@@ -96,39 +96,51 @@ def combine_datasets(
             stats["safety_dataset"]["total"] += 1
             try:
                 item = json.loads(line.strip())
-                # Standardize format
+                # Standardize format with all required columns
                 input_text = str(item.get("prompt", item.get("input", ""))).strip()
-                output_text = str(item.get("response", item.get("output", item.get("chosen_response", "")))).strip()
+                # For safety dataset, we'll keep output empty as it will be generated later
+                output_text = ""  # Empty output for safety dataset
                 prompt_label = str(item.get("prompt_label", item.get("label", "unknown"))).lower()
                 
-                # Extract categories for all prompts
+                # Extract all required fields
+                source_l1 = str(item.get("source_l1", "unknown"))
+                source_l2 = str(item.get("source_l2", ""))
                 categories = []
-                # Try to get categories from various possible fields
+                subcategories = []
+                adversarial_persona = str(item.get("adversarial_persona", ""))
+                
+                # Handle categories and subcategories
                 raw_categories = item.get("categories", item.get("safety_categories", item.get("unsafe_categories", [])))
+                raw_subcategories = item.get("subcategories", [])
+                
                 if isinstance(raw_categories, str):
                     categories = [c.strip().lower() for c in raw_categories.split(",")]
                 elif isinstance(raw_categories, list):
                     categories = [str(c).strip().lower() for c in raw_categories]
                 
+                if isinstance(raw_subcategories, str):
+                    subcategories = [s.strip().lower() for s in raw_subcategories.split(",")]
+                elif isinstance(raw_subcategories, list):
+                    subcategories = [str(s).strip().lower() for s in raw_subcategories]
+                
                 # For unsafe prompts, ensure we have at least one category
                 if prompt_label != "safe" and not categories:
-                    # If no categories found but prompt is unsafe, use the label as a category
                     categories = [prompt_label]
                 # For safe prompts, if no categories found, use "safe" as category
                 elif prompt_label == "safe" and not categories:
                     categories = ["safe"]
                 
-                # Count tokens
+                # Count tokens (only for input since output is empty)
                 input_tokens = count_tokens(input_text)
-                output_tokens = count_tokens(output_text)
-                total_tokens = input_tokens + output_tokens
+                output_tokens = 0  # No output tokens for safety dataset
+                total_tokens = input_tokens  # Only count input tokens
                 
                 # Update statistics
                 stats["safety_dataset"]["total_tokens"] += total_tokens
                 stats["safety_dataset"]["min_tokens"] = min(stats["safety_dataset"]["min_tokens"], total_tokens)
                 stats["safety_dataset"]["max_tokens"] = max(stats["safety_dataset"]["max_tokens"], total_tokens)
                 
-                # Check token limit
+                # Check token limit (only for input since output is empty)
                 if total_tokens > max_tokens:
                     stats["safety_dataset"]["skipped"] += 1
                     skipped_samples += 1
@@ -137,21 +149,24 @@ def combine_datasets(
                 transformed_item = {
                     "id": item_id,  # Use numeric ID
                     "input": input_text,
-                    "output": output_text,
+                    "output": output_text,  # Empty output
                     "source": "safety_dataset",
                     "metadata": {
-                        "category": str(item.get("category", "")),
+                        "source_l1": source_l1,
+                        "source_l2": source_l2,
+                        "prompt_label": prompt_label,
+                        "categories": categories,
+                        "subcategories": subcategories,
+                        "adversarial_persona": adversarial_persona,
                         "original_id": str(item.get("id", "")),
                         "split": "train",
                         "token_count": total_tokens,
                         "input_tokens": input_tokens,
-                        "output_tokens": output_tokens,
-                        "prompt_label": prompt_label,  # Track prompt label in metadata
-                        "categories": categories  # Track categories in metadata
+                        "output_tokens": output_tokens
                     }
                 }
-                # Only add if we have both input and output
-                if transformed_item["input"] and transformed_item["output"]:
+                # Only add if we have input (output can be empty)
+                if transformed_item["input"]:
                     safety_data.append(transformed_item)
                     item_id += 1
                     stats["safety_dataset"]["samples"] += 1
@@ -276,15 +291,15 @@ def combine_datasets(
     train_file = os.path.join(output_dir, "train.jsonl")
     val_file = os.path.join(output_dir, "val.jsonl")
     
-    print(f"\nSaving train dataset ({len(train_data)} samples) to {train_file}...")
-    with open(train_file, 'w') as f:
+    print(f"\nSaving train dataset ({len(train_data):,} samples) to {train_file}...")
+    with open(train_file, 'w', encoding='utf-8') as f:
         for item in train_data:
-            f.write(json.dumps(item) + '\n')
+            f.write(json.dumps(item, ensure_ascii=False) + '\n')
     
-    print(f"Saving validation dataset ({len(val_data)} samples) to {val_file}...")
-    with open(val_file, 'w') as f:
+    print(f"Saving validation dataset ({len(val_data):,} samples) to {val_file}...")
+    with open(val_file, 'w', encoding='utf-8') as f:
         for item in val_data:
-            f.write(json.dumps(item) + '\n')
+            f.write(json.dumps(item, ensure_ascii=False) + '\n')
     
     # Print final statistics
     print("\nFinal dataset statistics:")
