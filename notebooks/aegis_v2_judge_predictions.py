@@ -5,14 +5,14 @@ from transformers import AutoTokenizer
 from pandarallel import pandarallel
 import openai
 import json
+from aegis_v2_score_calculation import process_safety_metrics
+
 
 # Hardcoded arguments
 RESULTS_PATH = "/lustre/fsw/portfolios/llmservice/users/vinitas/safety_scripts/aegis_datasets"
 HOST = "localhost"
 PORT = 8000
-PROCESS_REASONING_TRACES = True
-MODEL_NAME = "aegis_v2"
-TOKENIZER_PATH = "/lustre/fsw/portfolios/llmservice/users/vinitas/llama-3.1-nemoguard-8b-content-safety"
+MODEL_PATH = "/lustre/fsw/portfolios/llmservice/users/vinitas/llama-3.1-nemoguard-8b-content-safety"
 
 #setup vllm server
 # CUDA_VISIBLE_DEVICES=0 vllm serve "/lustre/fsw/portfolios/llmservice/users/vinitas/llama-3.1-nemoguard-8b-content-safety" --served-model-name "aegis_v2" -tp 1
@@ -66,13 +66,19 @@ Output JSON: """
 
     return prompt
 
-def query_safety_server(prompt, response, client, tokenizer, model_name="aegis_v2"):
+def query_safety_server(prompt, response):
+    client = openai.OpenAI(
+        base_url=f"http://{HOST}:{PORT}/v1",
+        api_key="EMPTY"
+    )
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
+    
     safety_prompt = moderation_prompt_for_chat_aegis_v2(prompt, response)
     formatted_prompt = tokenizer.apply_chat_template([{"role": "user", "content": safety_prompt}], add_generation_prompt=True, tokenize=False)
 
     try:
         response = client.chat.completions.create(
-            model=model_name,
+            model="aegis_v2",
             messages=[{"role": "user", "content": formatted_prompt}],
             max_tokens=100,
             temperature=0.0,
@@ -88,7 +94,7 @@ def query_safety_server(prompt, response, client, tokenizer, model_name="aegis_v
             prefill = f"""{{"User Safety": "{user_safety}", "Response Safety":"""
             prefilled_prompt = formatted_prompt + prefill
             response = client.chat.completions.create(
-                model=model_name,
+                model="aegis_v2",
                 messages=[{"role": "user", "content": prefilled_prompt}],
                 max_tokens=100,
                 temperature=0.0,
@@ -101,15 +107,6 @@ def query_safety_server(prompt, response, client, tokenizer, model_name="aegis_v
     except Exception as e:
         print(f"Error querying server: {e}")
         return "ERROR"
-
-def query_safety_server_worker(prompt, response, model_name="aegis_v2"):
-    """Worker function that creates its own client"""
-    client = openai.OpenAI(
-        base_url=f"http://{HOST}:{PORT}/v1",
-        api_key="EMPTY"
-    )
-    tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_PATH)
-    return query_safety_server(prompt, response, client, tokenizer, model_name)
 
 def load_results_dataframe(results_dir):
     result_dfs = []
@@ -139,20 +136,24 @@ def main():
 
     pandarallel.initialize(nb_workers=100, progress_bar=True)
 
-    if PROCESS_REASONING_TRACES:
-        results_df = process_reasoning_traces(results_df)
+    results_df = process_reasoning_traces(results_df)
 
     results_df["aegis_v2_safety_generation_stripped_response"] = results_df.parallel_apply(
-        lambda x: query_safety_server_worker(x["prompt"], x["generated_response_stripped"]), axis=1
+        lambda x: query_safety_server(x["prompt"], x["generated_response_stripped"]), axis=1
     )
 
     results_df["aegis_v2_safety_generation_full_response"] = results_df.parallel_apply(
-        lambda x: query_safety_server_worker(x["prompt"], x["generated_response"]), axis=1
+        lambda x: query_safety_server(x["prompt"], x["generated_response"]), axis=1
     )
 
     output_file = f"{RESULTS_PATH}/aegis_v2_safety_generations.jsonl"
     results_df.to_json(output_file, orient="records", lines=True)
     print(f"Results saved to {output_file}")
+
+    final_metrics = process_safety_metrics(results_df)
+    metrics_file = f"{RESULTS_PATH}/safety_metrics.csv"
+    final_metrics.to_csv(metrics_file, index=False)
+    print(f"Safety metrics saved to {metrics_file}")
 
 if __name__ == "__main__":
     main()

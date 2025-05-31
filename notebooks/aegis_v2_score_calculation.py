@@ -64,9 +64,8 @@ def calculate_safety_metrics(df):
     
     return final_metrics
 
-def main():
-    df = pd.read_json(f"{RESULTS_PATH}/aegis_v2_safety_generations.jsonl", lines=True)
-    
+def process_safety_metrics(df):
+    """Process safety metrics from a dataframe containing safety generations"""
     df["aegis_v2_safety_prediction_stripped_response"] = df["aegis_v2_safety_generation_stripped_response"].apply(parse_aegis_v2_response)
     df["aegis_v2_safety_prediction_full_response"] = df["aegis_v2_safety_generation_full_response"].apply(parse_aegis_v2_response)
     df.loc[~df["contains_end_of_thought"], "aegis_v2_safety_prediction_stripped_response"] = "error: missing end of thought"
@@ -77,9 +76,4 @@ def main():
     print("\nOverall Safety Metrics:")
     print(final_metrics.to_string(index=False))
     
-    output_file = f"{RESULTS_PATH}/safety_metrics.csv"
-    final_metrics.to_csv(output_file, index=False)
-    print(f"\nResults saved to {output_file}")
-
-if __name__ == "__main__":
-    main()
+    return final_metrics
