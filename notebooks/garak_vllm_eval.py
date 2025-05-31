@@ -4,6 +4,7 @@ import time
 import signal
 import sys
 from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Base paths
 BASE_DIR = "/lustre/fsw/portfolios/llmservice/users/vinitas/safety_scripts"
@@ -131,35 +132,48 @@ def run_vllm():
     return process
 
 def run_garak_probes(vllm_process):
-    """Run all Garak probes in sequence"""
-    for probe in tqdm(PROBES, desc="Running Garak probes"):
-        probe_name = f"probe_{probe}"
-        report_path = os.path.join(REPORT_DIR, probe_name)
-        conf_path = os.path.join(CONF_DIR, f"DeepSeek-R1-Distill-Llama-8B__max_tokens4096__{probe_name}.conf")
-        log_path = os.path.join(LOG_DIR, f"garak__DeepSeek-R1-Distill-Llama-8B__max_tokens4096__{probe_name}.log")
+    """Run Garak probes in parallel using ThreadPoolExecutor"""
+    max_workers = 4 
+    
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_probe = {
+            executor.submit(run_single_probe, probe): probe 
+            for probe in PROBES
+        }
         
-        print(f"Running probe: {probe}")
-        
-        env = os.environ.copy()
-        env["XDG_DATA_HOME"] = report_path
-        
-        # Add Garak directory to PYTHONPATH
-        if "PYTHONPATH" in env:
-            env["PYTHONPATH"] = f"{GARAK_DIR}:{env['PYTHONPATH']}"
-        else:
-            env["PYTHONPATH"] = GARAK_DIR
-        
-        garak_cmd = ["garak", "--config", conf_path]
-        
-        with open(log_path, 'w') as f:
-            subprocess.run(
-                garak_cmd,
-                env=env,
-                stdout=f,
-                stderr=f
-            )
-        
-        print(f"Completed probe: {probe}")
+        for future in tqdm(as_completed(future_to_probe), total=len(PROBES), desc="Running probes"):
+            probe = future_to_probe[future]
+            try:
+                result = future.result()
+                print(f"Completed probe: {probe}")
+            except Exception as e:
+                print(f"Error running probe {probe}: {str(e)}")
+
+def run_single_probe(probe):
+    """Run a single Garak probe"""
+    probe_name = f"probe_{probe}"
+    report_path = os.path.join(REPORT_DIR, probe_name)
+    conf_path = os.path.join(CONF_DIR, f"DeepSeek-R1-Distill-Llama-8B__max_tokens4096__{probe_name}.conf")
+    log_path = os.path.join(LOG_DIR, f"garak__DeepSeek-R1-Distill-Llama-8B__max_tokens4096__{probe_name}.log")
+    
+    env = os.environ.copy()
+    env["XDG_DATA_HOME"] = report_path
+    
+    if "PYTHONPATH" in env:
+        env["PYTHONPATH"] = f"{GARAK_DIR}:{env['PYTHONPATH']}"
+    else:
+        env["PYTHONPATH"] = GARAK_DIR
+    
+    garak_cmd = ["garak", "--config", conf_path]
+    
+    with open(log_path, 'w') as f:
+        subprocess.run(
+            garak_cmd,
+            env=env,
+            stdout=f,
+            stderr=f,
+            check=True
+        )
 
 def main():
     os.makedirs(LOG_DIR, exist_ok=True)
