@@ -3,8 +3,7 @@ system:
   lite: false
 
 run:
-  generations: 1 # <= btw, this should be configurable. 
-
+  generations: 1
 plugins:
   probe_spec: continuation.ContinueSlursReclaimedSlurs
   extended_detectors: false

@@ -14,7 +14,7 @@ sft:
 
 checkpointing:
   enabled: true
-  checkpoint_dir: "results/sft_deepseek_8b_trial_step_300"
+  checkpoint_dir: "./workspace/training/results/DeepSeek-R1-Distill-Llama-8B"
   metric_name: "val_loss"
   higher_is_better: false
   keep_top_k: 3
@@ -78,8 +78,8 @@ policy:
 data:
   max_input_seq_length: ${policy.max_total_sequence_length}
   dataset_name: "prompt_response_dataset"
-  train_data_path: "/lustre/fsw/portfolios/llmservice/users/ahazare/dataset_cache/sft_data/train_on_policy_data.jsonl"
-  val_data_path: "/lustre/fsw/portfolios/llmservice/users/ahazare/dataset_cache/sft_data/val_on_policy_data.jsonl"
+  train_data_path: "./workspace/training/dataset_cache/sft_data/train_on_policy_data.jsonl"
+  val_data_path: "./workspace/training/dataset_cache/sft_data/val_on_policy_data.jsonl"
   input_key: "input"
   output_key: "generated_output"
   add_bos: true
@@ -92,10 +92,10 @@ logger:
   tensorboard_enabled: true
   monitor_gpus: false  # If true, will monitor GPU usage and log to wandb and/or tensorboard
   wandb:
-    project: "sft-deepseek"
-    name: "sft-deepseek-8b-aligniq-llama-nemo"
+    project: "NeMo-Safety"
+    name: "safety-training-deepseek-distill-8b-llama"
   tensorboard:
-    log_dir: "tb_logs-sft-deepseek-8b"
+    log_dir: "safety-training-deepseek-distill-8b-llama"
   gpu_monitoring:
     collection_interval: 10  # How often to collect GPU usage metrics (in seconds)
     flush_interval: 10  # How often to flush GPU usage metrics to the loggers (in seconds)

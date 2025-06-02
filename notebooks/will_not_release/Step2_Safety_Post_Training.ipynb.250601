@@ -1,0 +1,905 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "def9dcce-240c-49ba-8d02-f4a70053d18c",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import os\n",
+    "import subprocess\n",
+    "import time\n",
+    "from pathlib import Path\n",
+    "from huggingface_hub import hf_hub_download\n",
+    "import shutil\n",
+    "\n",
+    "# Base directory and configuration\n",
+    "BASE_DIR = \"/lustre/fsw/portfolios/llmservice/users/ahazare\"\n",
+    "LOG_DIR = \"/lustre/fsw/portfolios/llmservice/users/ahazare/gtc_paris/logs\"\n",
+    "SAFETY_DATASET_NAME = \"nemo_safety_blend_v0.2.2.jsonl\"\n",
+    "POST_TRAINING_DATASET_NAME = \"nvidia/Llama-Nemotron-Post-Training-Dataset\"\n",
+    "MODEL_NAME = \"deepseek-ai/DeepSeek-R1-Distill-Llama-8B\"\n",
+    "SAFETY_MODEL_NAME = \"/lustre/fsw/portfolios/llmservice/users/ahazare/cache/huggingface/llama-3.1-nemoguard-8b-content-safety\"\n",
+    "\n",
+    "# Credentials\n",
+    "os.environ.update({\n",
+    "    \"HF_TOKEN\":\"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\",\n",
+    "    \"WANDB_API_KEY\": \"3995b8d5d51dde52b47817ff67f76790aa594807\"\n",
+    "})"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "bbde3367-ff98-4984-b8e1-7687fbc6379b",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Set environment variables\n",
+    "os.environ.update({\n",
+    "    'TMPDIR': f\"{BASE_DIR}/tmp\",\n",
+    "    'XDG_CACHE_HOME': f\"{BASE_DIR}/cache\",\n",
+    "    'HF_HOME': f\"{BASE_DIR}/cache/huggingface\",\n",
+    "    'UV_CACHE_DIR': f\"{BASE_DIR}/cache/uv\",\n",
+    "    'TRITON_CACHE_DIR': f\"{BASE_DIR}/cache/triton\",\n",
+    "    'DATASET_CACHE_DIR': f\"{BASE_DIR}/dataset_cache\",\n",
+    "    'RAY_TMPDIR': \"/tmp/ray_ahazare\",\n",
+    "    'LOG_DIR': f\"{LOG_DIR}\",\n",
+    "\n",
+    "})\n",
+    "\n",
+    "# Create directories\n",
+    "for dir_path in [os.environ['TMPDIR'], os.environ['XDG_CACHE_HOME'], os.environ['HF_HOME'],\n",
+    "                 os.environ['UV_CACHE_DIR'],os.environ['TRITON_CACHE_DIR'], os.environ['DATASET_CACHE_DIR'], \n",
+    "                 os.environ['RAY_TMPDIR'], os.environ['LOG_DIR']]:\n",
+    "    Path(dir_path).mkdir(parents=True, exist_ok=True)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 22,
+   "id": "daf5e2e0-0b2b-4032-84d6-d91f3b16891b",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "fatal: destination path 'eval-safety' already exists and is not an empty directory.\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\n",
+      "Starting dataset collection...\n",
+      "Output file: /lustre/fsw/portfolios/llmservice/users/ahazare/dataset_cache/nemo_safety_blend_v0.2.2.jsonl\n",
+      "Target sample size: 2,000\n",
+      "Sampling method: uniform\n",
+      "Using cache directory: /lustre/fsw/portfolios/llmservice/users/ahazare/dataset_cache\n",
+      "\n",
+      "Downloading Aegis v2 dataset...\n",
+      "Source: nvidia/Aegis-AI-Content-Safety-Dataset-2.0\n",
+      "\n",
+      "================================================================================\n",
+      "Dataset: Aegis v2\n",
+      "Number of samples: 23,077\n",
+      "================================================================================\n",
+      "\n",
+      "\n",
+      "Downloading Gretel Safety Alignment v1 dataset...\n",
+      "Source: gretelai/gretel-safety-alignment-en-v1\n",
+      "\n",
+      "================================================================================\n",
+      "Dataset: Gretel Safety Alignment v1\n",
+      "Number of samples: 5,997\n",
+      "================================================================================\n",
+      "\n",
+      "\n",
+      "Downloading Harmful Tasks dataset...\n",
+      "Source: CrystalEye42/eval-safety\n",
+      "Processing Harmful Tasks data...\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "Processing categories: 100%|██████████| 5/5 [00:00<00:00, 66156.21it/s]\n",
+      "Processing tasks: 100%|██████████| 11/11 [00:00<00:00, 31709.51it/s]\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\n",
+      "================================================================================\n",
+      "Dataset: Harmful Tasks\n",
+      "Number of samples: 1,650\n",
+      "================================================================================\n",
+      "\n",
+      "\n",
+      "Downloading RedTeam 2k dataset...\n",
+      "Source: JailbreakV-28K/JailBreakV-28k\n",
+      "\n",
+      "================================================================================\n",
+      "Dataset: RedTeam 2k\n",
+      "Number of samples: 582\n",
+      "================================================================================\n",
+      "\n",
+      "\n",
+      "Combining datasets...\n",
+      "\n",
+      "Original Dataset Distribution\n",
+      "================================================================================\n",
+      "Dataset                             Count   Percentage\n",
+      "--------------------------------------------------------------------------------\n",
+      "Aegis v2                           23,077       73.74%\n",
+      "Gretel Safety Alignment v1          5,994       19.15%\n",
+      "HarmfulTasks                        1,650        5.27%\n",
+      "RedTeam 2k                            573        1.83%\n",
+      "--------------------------------------------------------------------------------\n",
+      "Total                              31,294      100.00%\n",
+      "================================================================================\n",
+      "\n",
+      "Saving full dataset to /lustre/fsw/portfolios/llmservice/users/ahazare/dataset_cache/nemo_safety_blend_v0.2.2.jsonl...\n",
+      "Full dataset saved with 31,294 samples\n",
+      "\n",
+      "Performing uniform sampling across categories...\n",
+      "RedTeam 2k: 500 samples selected\n",
+      "HarmfulTasks: 500 samples selected\n",
+      "Gretel Safety Alignment v1: 500 samples selected\n",
+      "Aegis v2: 500 samples selected\n",
+      "\n",
+      "Sampling Report\n",
+      "================================================================================\n",
+      "Original dataset size: 31,294\n",
+      "Sampled dataset size: 2,000\n",
+      "Sampling ratio: 6.39%\n",
+      "Sampling method: uniform\n",
+      "================================================================================\n",
+      "\n",
+      "Sampled Dataset Distribution\n",
+      "================================================================================\n",
+      "Dataset                             Count   Percentage\n",
+      "--------------------------------------------------------------------------------\n",
+      "RedTeam 2k                            500       25.00%\n",
+      "HarmfulTasks                          500       25.00%\n",
+      "Gretel Safety Alignment v1            500       25.00%\n",
+      "Aegis v2                              500       25.00%\n",
+      "--------------------------------------------------------------------------------\n",
+      "Total                               2,000      100.00%\n",
+      "================================================================================\n",
+      "\n",
+      "Saving sampled dataset to /lustre/fsw/portfolios/llmservice/users/ahazare/dataset_cache/nemo_safety_blend_v0.2.2_sampled_2000_uniform.jsonl\n",
+      "Sampled dataset saved with 2,000 samples\n",
+      "\n",
+      "Total processing time: 12.76 seconds\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "Sampling from categories: 100%|██████████| 4/4 [00:00<00:00, 546.67it/s]\n"
+     ]
+    }
+   ],
+   "source": [
+    "# 1. Download NV Safety Dataset\n",
+    "os.chdir(f\"{BASE_DIR}/NeMo-Safety/notebooks\")\n",
+    "result = subprocess.run([\n",
+    "    'python3', 'safety_dataset_blend_generation.py',\n",
+    "    '--filename', os.path.join(os.environ['DATASET_CACHE_DIR'], SAFETY_DATASET_NAME),\n",
+    "    '--total_samples', '2000',\n",
+    "    '--sampling_method', 'uniform',\n",
+    "    '--cache_dir', os.environ['DATASET_CACHE_DIR']\n",
+    "], check=True)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "id": "8546dff5-4109-4e84-a335-c51a8d8af372",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Downloading SFT/math/math_v1.1.jsonl...\n",
+      "Total lines in file: 10000\n",
+      "Extracted 1000 random samples to /lustre/fsw/portfolios/llmservice/users/ahazare/dataset_cache/Llama-Nemotron-Post-Training-Dataset/math_v1.1.jsonl\n",
+      "Downloading SFT/code/code_v1.1.jsonl...\n",
+      "Total lines in file: 10000\n",
+      "Extracted 1000 random samples to /lustre/fsw/portfolios/llmservice/users/ahazare/dataset_cache/Llama-Nemotron-Post-Training-Dataset/code_v1.1.jsonl\n",
+      "Downloading SFT/chat/chat.jsonl...\n",
+      "Total lines in file: 10000\n",
+      "Extracted 1000 random samples to /lustre/fsw/portfolios/llmservice/users/ahazare/dataset_cache/Llama-Nemotron-Post-Training-Dataset/chat.jsonl\n",
+      "Downloading SFT/science/science.jsonl...\n",
+      "Total lines in file: 10000\n",
+      "Extracted 1000 random samples to /lustre/fsw/portfolios/llmservice/users/ahazare/dataset_cache/Llama-Nemotron-Post-Training-Dataset/science.jsonl\n"
+     ]
+    }
+   ],
+   "source": [
+    "# 2. Download Llama Nemotron Post-training Dataset\n",
+    "\n",
+    "files = [\n",
+    "    \"SFT/math/math_v1.1.jsonl\",\n",
+    "    \"SFT/code/code_v1.1.jsonl\",\n",
+    "    \"SFT/chat/chat.jsonl\",\n",
+    "    \"SFT/science/science.jsonl\"\n",
+    "]\n",
+    "\n",
+    "LLAMA_NEMO_DIR = f\"{os.environ['DATASET_CACHE_DIR']}/Llama-Nemotron-Post-Training-Dataset\"\n",
+    "Path(LLAMA_NEMO_DIR).mkdir(parents=True, exist_ok=True)\n",
+    "\n",
+    "for file in files:\n",
+    "    print(f\"Downloading {file}...\")\n",
+    "    downloaded_path = hf_hub_download(\n",
+    "        repo_id=POST_TRAINING_DATASET_NAME,\n",
+    "        filename=file,\n",
+    "        repo_type='dataset',\n",
+    "        cache_dir=os.environ['DATASET_CACHE_DIR']\n",
+    "    )\n",
+    "    \n",
+    "    filename = Path(file).name\n",
+    "    target_path = f\"{LLAMA_NEMO_DIR}/{filename}\"\n",
+    "    \n",
+    "    # Count lines and sample\n",
+    "    with open(downloaded_path, 'r') as f:\n",
+    "        total_lines = sum(1 for _ in f)\n",
+    "    \n",
+    "    print(f\"Total lines in file: {total_lines}\")\n",
+    "    \n",
+    "    if total_lines > 1000:\n",
+    "        # Use shuf for random sampling\n",
+    "        subprocess.run(['shuf', '-n', '1000', downloaded_path], stdout=open(target_path, 'w'), check=True)\n",
+    "        print(f\"Extracted 1000 random samples to {target_path}\")\n",
+    "    else:\n",
+    "        shutil.copy2(downloaded_path, target_path)\n",
+    "        print(f\"File has fewer than 1000 lines, copied all {total_lines} lines\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "id": "ff0fd393-241b-4200-a2ba-c75c03904626",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\n",
+      "Loading safety dataset from /lustre/fsw/portfolios/llmservice/users/ahazare/dataset_cache/nemo_safety_blend_v0.2.2_sampled_2000.jsonl...\n",
+      "Loaded 2000 samples from safety dataset\n",
+      "\n",
+      "Found 4 Llama-Nemotron files: ['/lustre/fsw/portfolios/llmservice/users/ahazare/dataset_cache/Llama-Nemotron-Post-Training-Dataset/math_v1.1.jsonl', '/lustre/fsw/portfolios/llmservice/users/ahazare/dataset_cache/Llama-Nemotron-Post-Training-Dataset/code_v1.1.jsonl', '/lustre/fsw/portfolios/llmservice/users/ahazare/dataset_cache/Llama-Nemotron-Post-Training-Dataset/chat.jsonl', '/lustre/fsw/portfolios/llmservice/users/ahazare/dataset_cache/Llama-Nemotron-Post-Training-Dataset/science.jsonl']\n",
+      "\n",
+      "Loading /lustre/fsw/portfolios/llmservice/users/ahazare/dataset_cache/Llama-Nemotron-Post-Training-Dataset/math_v1.1.jsonl as 'math_v1'...\n",
+      "Added 999/1000 items from math_v1\n",
+      "\n",
+      "Loading /lustre/fsw/portfolios/llmservice/users/ahazare/dataset_cache/Llama-Nemotron-Post-Training-Dataset/code_v1.1.jsonl as 'code_v1'...\n",
+      "Added 897/1000 items from code_v1\n",
+      "\n",
+      "Loading /lustre/fsw/portfolios/llmservice/users/ahazare/dataset_cache/Llama-Nemotron-Post-Training-Dataset/chat.jsonl as 'chat'...\n",
+      "Added 1000/1000 items from chat\n",
+      "\n",
+      "Token Statistics:\n",
+      "Total samples processed: 5000\n",
+      "Samples skipped due to token limit: 104 (2.1%)\n",
+      "Samples kept: 4896 (97.9%)\n",
+      "\n",
+      "Token counts by source:\n",
+      "\n",
+      "llama_nemo_code_v1:\n",
+      "  Samples: 897 (17.9%)\n",
+      "  Total tokens: 9,317,317\n",
+      "  Average tokens per sample: 10387.2\n",
+      "  Min tokens: 594\n",
+      "  Max tokens: 18308\n",
+      "  Samples skipped: 103 (10.3%)\n",
+      "\n",
+      "llama_nemo_math_v1:\n",
+      "  Samples: 999 (20.0%)\n",
+      "  Total tokens: 6,055,269\n",
+      "  Average tokens per sample: 6061.3\n",
+      "  Min tokens: 430\n",
+      "  Max tokens: 16592\n",
+      "  Samples skipped: 1 (0.1%)\n",
+      "\n",
+      "llama_nemo_chat:\n",
+      "  Samples: 1000 (20.0%)\n",
+      "  Total tokens: 1,410,182\n",
+      "  Average tokens per sample: 1410.2\n",
+      "  Min tokens: 47\n",
+      "  Max tokens: 7894\n",
+      "  Samples skipped: 0 (0.0%)\n",
+      "\n",
+      "safety_dataset:\n",
+      "  Samples: 2000 (40.0%)\n",
+      "  Total tokens: 233,000\n",
+      "  Average tokens per sample: 116.5\n",
+      "  Min tokens: 1\n",
+      "  Max tokens: 3284\n",
+      "  Samples skipped: 0 (0.0%)\n",
+      "\n",
+      "Saving train dataset (4,750 samples) to /lustre/fsw/portfolios/llmservice/users/ahazare/dataset_cache/sft_data/train.jsonl...\n",
+      "Saving validation dataset (146 samples) to /lustre/fsw/portfolios/llmservice/users/ahazare/dataset_cache/sft_data/val.jsonl...\n",
+      "\n",
+      "Final dataset statistics:\n",
+      "Total samples processed: 5000\n",
+      "Samples kept: 4896 (97.9%)\n",
+      "Train samples: 4750 (97.0%)\n",
+      "Validation samples: 146 (3.0%)\n",
+      "\n",
+      "Train set source distribution:\n",
+      "safety_dataset: 1935 (40.7%)\n",
+      "llama_nemo_chat: 975 (20.5%)\n",
+      "llama_nemo_math_v1: 965 (20.3%)\n",
+      "llama_nemo_code_v1: 875 (18.4%)\n",
+      "\n",
+      "Validation set source distribution:\n",
+      "safety_dataset: 65 (44.5%)\n",
+      "llama_nemo_math_v1: 34 (23.3%)\n",
+      "llama_nemo_chat: 25 (17.1%)\n",
+      "llama_nemo_code_v1: 22 (15.1%)\n",
+      "\n",
+      "Prompt Label Statistics:\n",
+      "\n",
+      "Label Distribution:\n",
+      "unsafe: 1228 samples (61.4%)\n",
+      "safe: 772 samples (38.6%)\n",
+      "\n",
+      "Category Distribution:\n",
+      ": 599 samples\n",
+      "criminal planning/confessions: 343 samples\n",
+      "needs caution: 219 samples\n",
+      "hate/identity hate: 122 samples\n",
+      "harassment: 112 samples\n",
+      "violence: 108 samples\n",
+      "system risks: 87 samples\n",
+      "malicious use: 85 samples\n",
+      "profanity: 77 samples\n",
+      "information hazards: 77 samples\n",
+      "societal risks: 75 samples\n",
+      "controlled/regulated substances: 64 samples\n",
+      "sexual: 61 samples\n",
+      "pii/privacy: 60 samples\n",
+      "discrimination: 59 samples\n",
+      "guns and illegal weapons: 47 samples\n",
+      "unauthorized advice: 34 samples\n",
+      "other: 26 samples\n",
+      "substance abuse and dangerous practices: 25 samples\n",
+      "unlawful behaviors and activities: 24 samples\n",
+      "misinformation and disinformation: 23 samples\n",
+      "suicide and self harm: 21 samples\n",
+      "political/misinformation/conspiracy: 20 samples\n",
+      "hate speech and discrimination: 19 samples\n",
+      "immoral/unethical: 18 samples\n",
+      "illegal activity: 17 samples\n",
+      "fraud/deception: 15 samples\n",
+      "security threats and cybercrimes: 14 samples\n",
+      "sexual (minor): 12 samples\n",
+      "tailored unlicensed advice: 7 samples\n",
+      "threat: 6 samples\n",
+      "malware: 6 samples\n",
+      "privacy violation: 4 samples\n",
+      "economic harm: 4 samples\n",
+      "unethical behavior: 3 samples\n",
+      "child abuse: 3 samples\n",
+      "high risk gov decision making: 2 samples\n",
+      "copyright/trademark/plagiarism: 2 samples\n",
+      "hate speech: 2 samples\n",
+      "health consultation: 2 samples\n",
+      "physical harm: 1 samples\n",
+      "fraud: 1 samples\n",
+      "government decision: 1 samples\n",
+      "political sensitivity: 1 samples\n",
+      "animal abuse: 1 samples\n",
+      "\n",
+      "Category Distribution by Label:\n",
+      "\n",
+      "SAFE prompts:\n",
+      "  : 599 samples (77.6%)\n",
+      "  needs caution: 165 samples (21.4%)\n",
+      "  harassment: 5 samples (0.6%)\n",
+      "  sexual: 4 samples (0.5%)\n",
+      "  violence: 4 samples (0.5%)\n",
+      "  unauthorized advice: 4 samples (0.5%)\n",
+      "  criminal planning/confessions: 3 samples (0.4%)\n",
+      "  profanity: 2 samples (0.3%)\n",
+      "  hate/identity hate: 2 samples (0.3%)\n",
+      "  political/misinformation/conspiracy: 2 samples (0.3%)\n",
+      "  controlled/regulated substances: 1 samples (0.1%)\n",
+      "  pii/privacy: 1 samples (0.1%)\n",
+      "\n",
+      "UNSAFE prompts:\n",
+      "  criminal planning/confessions: 340 samples (27.7%)\n",
+      "  hate/identity hate: 120 samples (9.8%)\n",
+      "  harassment: 107 samples (8.7%)\n",
+      "  violence: 104 samples (8.5%)\n",
+      "  system risks: 87 samples (7.1%)\n",
+      "  malicious use: 85 samples (6.9%)\n",
+      "  information hazards: 77 samples (6.3%)\n",
+      "  profanity: 75 samples (6.1%)\n",
+      "  societal risks: 75 samples (6.1%)\n",
+      "  controlled/regulated substances: 63 samples (5.1%)\n",
+      "  pii/privacy: 59 samples (4.8%)\n",
+      "  discrimination: 59 samples (4.8%)\n",
+      "  sexual: 57 samples (4.6%)\n",
+      "  needs caution: 54 samples (4.4%)\n",
+      "  guns and illegal weapons: 47 samples (3.8%)\n",
+      "  unauthorized advice: 30 samples (2.4%)\n",
+      "  other: 26 samples (2.1%)\n",
+      "  substance abuse and dangerous practices: 25 samples (2.0%)\n",
+      "  unlawful behaviors and activities: 24 samples (2.0%)\n",
+      "  misinformation and disinformation: 23 samples (1.9%)\n",
+      "  suicide and self harm: 21 samples (1.7%)\n",
+      "  hate speech and discrimination: 19 samples (1.5%)\n",
+      "  immoral/unethical: 18 samples (1.5%)\n",
+      "  political/misinformation/conspiracy: 18 samples (1.5%)\n",
+      "  illegal activity: 17 samples (1.4%)\n",
+      "  fraud/deception: 15 samples (1.2%)\n",
+      "  security threats and cybercrimes: 14 samples (1.1%)\n",
+      "  sexual (minor): 12 samples (1.0%)\n",
+      "  tailored unlicensed advice: 7 samples (0.6%)\n",
+      "  threat: 6 samples (0.5%)\n",
+      "  malware: 6 samples (0.5%)\n",
+      "  privacy violation: 4 samples (0.3%)\n",
+      "  economic harm: 4 samples (0.3%)\n",
+      "  unethical behavior: 3 samples (0.2%)\n",
+      "  child abuse: 3 samples (0.2%)\n",
+      "  high risk gov decision making: 2 samples (0.2%)\n",
+      "  copyright/trademark/plagiarism: 2 samples (0.2%)\n",
+      "  hate speech: 2 samples (0.2%)\n",
+      "  health consultation: 2 samples (0.2%)\n",
+      "  physical harm: 1 samples (0.1%)\n",
+      "  fraud: 1 samples (0.1%)\n",
+      "  government decision: 1 samples (0.1%)\n",
+      "  political sensitivity: 1 samples (0.1%)\n",
+      "  animal abuse: 1 samples (0.1%)\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "CompletedProcess(args=['python3', 'combine_datasets.py', '--safety_file', '/lustre/fsw/portfolios/llmservice/users/ahazare/dataset_cache/nemo_safety_blend_v0.2.2_sampled_2000.jsonl', '--llama_nemo_dir', '/lustre/fsw/portfolios/llmservice/users/ahazare/dataset_cache/Llama-Nemotron-Post-Training-Dataset', '--output_dir', '/lustre/fsw/portfolios/llmservice/users/ahazare/dataset_cache/sft_data', '--val_split', '0.03', '--max_tokens', '16384', '--max_samples', '5000'], returncode=0)"
+      ]
+     },
+     "execution_count": 23,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# 3. Combine datasets\n",
+    "OUTPUT_DIR = f\"{os.environ['DATASET_CACHE_DIR']}/sft_data\"\n",
+    "subprocess.run([\n",
+    "    'python3', 'combine_datasets.py',\n",
+    "    '--safety_file', f\"{os.environ['DATASET_CACHE_DIR']}/nemo_safety_blend_v0.2.2_sampled_2000.jsonl\",\n",
+    "    '--llama_nemo_dir', LLAMA_NEMO_DIR,\n",
+    "    '--output_dir', OUTPUT_DIR,\n",
+    "    '--val_split', '0.03',\n",
+    "    '--max_tokens', '16384',\n",
+    "    '--max_samples', '5000'\n",
+    "], check=True)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 24,
+   "id": "badfae55-e3e8-41cd-89c5-8924c1760a60",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Starting policy model server...\n",
+      "Starting safety model server...\n"
+     ]
+    }
+   ],
+   "source": [
+    "# 4. Start vLLM servers\n",
+    "os.environ.update({\n",
+    "    'VLLM_ENGINE_ITERATION_TIMEOUT_S': '36000',\n",
+    "    'VLLM_ALLOW_LONG_MAX_MODEL_LEN': '1',\n",
+    "    'VLLM_HOST': '0.0.0.0',\n",
+    "    'VLLM_TENSOR_PARALLEL_SIZE': '1',\n",
+    "    'POLICY_MODEL_GPUS': '0,1,2,3',\n",
+    "    'SAFETY_MODEL_GPUS': '4,5'\n",
+    "})\n",
+    "\n",
+    "print(\"Starting policy model server...\")\n",
+    "policy_server = subprocess.Popen([\n",
+    "    'python3', '-m', 'vllm.entrypoints.openai.api_server',\n",
+    "    '--model', MODEL_NAME,\n",
+    "    '--trust-remote-code',\n",
+    "    '--seed', '1',\n",
+    "    '--host', os.environ['VLLM_HOST'],\n",
+    "    '--port', '5000',\n",
+    "    '--served-model-name', 'test-model',\n",
+    "    '--enable-reasoning', \n",
+    "    '--reasoning-parser', 'deepseek_r1',\n",
+    "    '--tensor-parallel-size', os.environ['VLLM_TENSOR_PARALLEL_SIZE'],\n",
+    "    '--download-dir', os.environ['HF_HOME']\n",
+    "], env={**os.environ, 'CUDA_VISIBLE_DEVICES': os.environ['POLICY_MODEL_GPUS']},\n",
+    "   stdout=open(f\"{LOG_DIR}/vllm-server-model.log\", 'w'),\n",
+    "   stderr=subprocess.STDOUT)\n",
+    "\n",
+    "print(\"Starting safety model server...\")\n",
+    "safety_server = subprocess.Popen([\n",
+    "    'python3', '-m', 'vllm.entrypoints.openai.api_server',\n",
+    "    '--model', SAFETY_MODEL_NAME,\n",
+    "    '--trust-remote-code',\n",
+    "    '--seed', '1',\n",
+    "    '--host', os.environ['VLLM_HOST'],\n",
+    "    '--port', '6000',\n",
+    "    '--served-model-name', 'safety-model',\n",
+    "    '--tensor-parallel-size', os.environ['VLLM_TENSOR_PARALLEL_SIZE'],\n",
+    "    '--download-dir', os.environ['HF_HOME']\n",
+    "], env={**os.environ, 'CUDA_VISIBLE_DEVICES': os.environ['SAFETY_MODEL_GPUS']},\n",
+    "   stdout=open(f\"{LOG_DIR}/vllm-server-safety.log\", 'w'),\n",
+    "   stderr=subprocess.STDOUT)\n",
+    "\n",
+    "# Cleanup vLLM servers\n",
+    "# subprocess.run(['pkill', '-f', 'vllm.entrypoints.openai.api_server'])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "9097d3de-44e5-4520-9233-69bb124790c3",
+   "metadata": {},
+   "source": [
+    " "
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "7ef26114-cbd5-45a3-87f3-7de6d5bdc139",
+   "metadata": {},
+   "source": [
+    " "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "id": "01e54dd4-01bd-4290-953e-17caceb87533",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "CompletedProcess(args=['pkill', '-f', 'vllm.entrypoints.openai.api_server'], returncode=1)"
+      ]
+     },
+     "execution_count": 16,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# Cleanup vLLM servers\n",
+    "# subprocess.run(['pkill', '-f', 'vllm.entrypoints.openai.api_server'])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 39,
+   "id": "a50387ea-22c6-4b5b-83fa-a564d1567169",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "CompletedProcess(args=['pkill', '-f', 'generate_on_policy_data.py'], returncode=1)"
+      ]
+     },
+     "execution_count": 39,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# Kill on-policy\n",
+    "subprocess.run(['pkill', '-f', 'generate_on_policy_data.py'])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 25,
+   "id": "e9f63bfd-c74f-4674-a1df-324b381cbbca",
+   "metadata": {
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Generating on-policy data...\n"
+     ]
+    }
+   ],
+   "source": [
+    "# 5. Generate on-policy data\n",
+    "\n",
+    "# On-Policy Data Generation parameters\n",
+    "CONCURRENCY = 16\n",
+    "MAX_ATTEMPTS = 3\n",
+    "BATCH_SIZE = 96\n",
+    "\n",
+    "MAX_TOKENS = 512\n",
+    "TEMPERATURE = 0.7\n",
+    "TOP_P = 0.9\n",
+    "\n",
+    "print(\"Generating on-policy data...\")\n",
+    "for dataset_type in ['train', 'val']:\n",
+    "    input_dataset = f\"{OUTPUT_DIR}/{dataset_type}.jsonl\"\n",
+    "    output_file = f\"{OUTPUT_DIR}/{dataset_type}_on_policy_data.jsonl\"\n",
+    "    DATASET_TYPE = dataset_type\n",
+    "    subprocess.run([\n",
+    "        'python3', 'generate_on_policy_data.py',\n",
+    "        '--model_name', MODEL_NAME,\n",
+    "        '--safety_model', SAFETY_MODEL_NAME,\n",
+    "        '--huggingface_token', os.environ['HF_TOKEN'],\n",
+    "        '--vllm_host', os.environ['VLLM_HOST'],\n",
+    "        '--vllm_model_port', '5000',\n",
+    "        '--vllm_safety_port', '6000',\n",
+    "        '--concurrency', str(CONCURRENCY),\n",
+    "        '--input_dataset', input_dataset,\n",
+    "        '--output', output_file,\n",
+    "        '--batch_size', str(BATCH_SIZE),\n",
+    "        '--max_tokens', str(MAX_TOKENS),\n",
+    "        '--temperature', str(TEMPERATURE),\n",
+    "        '--top_p', str(TOP_P)\n",
+    "    ], stdout=open(f\"{LOG_DIR}/{DATASET_TYPE}_on-policy.log\", 'w'),\n",
+    "                   stderr=subprocess.STDOUT)\n",
+    "\n",
+    "print(\"Data is Ready\")\n",
+    "    \n",
+    "# Cleanup vLLM servers\n",
+    "# subprocess.run(['pkill', '-f', 'vllm.entrypoints.openai.api_server'])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 27,
+   "id": "38e6b5e7-4fce-4563-8896-322e77f125cb",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "CompletedProcess(args=['pkill', '-f', 'vllm.entrypoints.openai.api_server'], returncode=0)"
+      ]
+     },
+     "execution_count": 27,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# Cleanup vLLM servers\n",
+    "subprocess.run(['pkill', '-f', 'vllm.entrypoints.openai.api_server'])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "900f46a5-c0b3-44de-ab52-3b905923b5e2",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 30,
+   "id": "8b87c2a9-1164-4e27-bc26-277462e34743",
+   "metadata": {
+    "scrolled": true
+   },
+   "outputs": [],
+   "source": [
+    "# !ps -aux | grep python"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "7e42fbf0-bd6d-480b-b56b-a35ef4a04bb8",
+   "metadata": {
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Running SFT...\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "\u001b[1m\u001b[33mwarning\u001b[39m\u001b[0m\u001b[1m:\u001b[0m \u001b[1m`VIRTUAL_ENV=/lustre/fsw/portfolios/llmservice/users/ahazare/penv3` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead\u001b[0m\n"
+     ]
+    },
+    {
+     "ename": "KeyboardInterrupt",
+     "evalue": "",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[31m---------------------------------------------------------------------------\u001b[39m",
+      "\u001b[31mKeyboardInterrupt\u001b[39m                         Traceback (most recent call last)",
+      "\u001b[36mFile \u001b[39m\u001b[32m/usr/lib/python3.12/subprocess.py:1264\u001b[39m, in \u001b[36mPopen.wait\u001b[39m\u001b[34m(self, timeout)\u001b[39m\n\u001b[32m   1263\u001b[39m \u001b[38;5;28;01mtry\u001b[39;00m:\n\u001b[32m-> \u001b[39m\u001b[32m1264\u001b[39m     \u001b[38;5;28;01mreturn\u001b[39;00m \u001b[38;5;28;43mself\u001b[39;49m\u001b[43m.\u001b[49m\u001b[43m_wait\u001b[49m\u001b[43m(\u001b[49m\u001b[43mtimeout\u001b[49m\u001b[43m=\u001b[49m\u001b[43mtimeout\u001b[49m\u001b[43m)\u001b[49m\n\u001b[32m   1265\u001b[39m \u001b[38;5;28;01mexcept\u001b[39;00m \u001b[38;5;167;01mKeyboardInterrupt\u001b[39;00m:\n\u001b[32m   1266\u001b[39m     \u001b[38;5;66;03m# https://bugs.python.org/issue25942\u001b[39;00m\n\u001b[32m   1267\u001b[39m     \u001b[38;5;66;03m# The first keyboard interrupt waits briefly for the child to\u001b[39;00m\n\u001b[32m   1268\u001b[39m     \u001b[38;5;66;03m# exit under the common assumption that it also received the ^C\u001b[39;00m\n\u001b[32m   1269\u001b[39m     \u001b[38;5;66;03m# generated SIGINT and will exit rapidly.\u001b[39;00m\n",
+      "\u001b[36mFile \u001b[39m\u001b[32m/usr/lib/python3.12/subprocess.py:2053\u001b[39m, in \u001b[36mPopen._wait\u001b[39m\u001b[34m(self, timeout)\u001b[39m\n\u001b[32m   2052\u001b[39m     \u001b[38;5;28;01mbreak\u001b[39;00m  \u001b[38;5;66;03m# Another thread waited.\u001b[39;00m\n\u001b[32m-> \u001b[39m\u001b[32m2053\u001b[39m (pid, sts) = \u001b[38;5;28;43mself\u001b[39;49m\u001b[43m.\u001b[49m\u001b[43m_try_wait\u001b[49m\u001b[43m(\u001b[49m\u001b[32;43m0\u001b[39;49m\u001b[43m)\u001b[49m\n\u001b[32m   2054\u001b[39m \u001b[38;5;66;03m# Check the pid and loop as waitpid has been known to\u001b[39;00m\n\u001b[32m   2055\u001b[39m \u001b[38;5;66;03m# return 0 even without WNOHANG in odd situations.\u001b[39;00m\n\u001b[32m   2056\u001b[39m \u001b[38;5;66;03m# http://bugs.python.org/issue14396.\u001b[39;00m\n",
+      "\u001b[36mFile \u001b[39m\u001b[32m/usr/lib/python3.12/subprocess.py:2011\u001b[39m, in \u001b[36mPopen._try_wait\u001b[39m\u001b[34m(self, wait_flags)\u001b[39m\n\u001b[32m   2010\u001b[39m \u001b[38;5;28;01mtry\u001b[39;00m:\n\u001b[32m-> \u001b[39m\u001b[32m2011\u001b[39m     (pid, sts) = \u001b[43mos\u001b[49m\u001b[43m.\u001b[49m\u001b[43mwaitpid\u001b[49m\u001b[43m(\u001b[49m\u001b[38;5;28;43mself\u001b[39;49m\u001b[43m.\u001b[49m\u001b[43mpid\u001b[49m\u001b[43m,\u001b[49m\u001b[43m \u001b[49m\u001b[43mwait_flags\u001b[49m\u001b[43m)\u001b[49m\n\u001b[32m   2012\u001b[39m \u001b[38;5;28;01mexcept\u001b[39;00m \u001b[38;5;167;01mChildProcessError\u001b[39;00m:\n\u001b[32m   2013\u001b[39m     \u001b[38;5;66;03m# This happens if SIGCLD is set to be ignored or waiting\u001b[39;00m\n\u001b[32m   2014\u001b[39m     \u001b[38;5;66;03m# for child processes has otherwise been disabled for our\u001b[39;00m\n\u001b[32m   2015\u001b[39m     \u001b[38;5;66;03m# process.  This child is dead, we can't get the status.\u001b[39;00m\n",
+      "\u001b[31mKeyboardInterrupt\u001b[39m: ",
+      "\nDuring handling of the above exception, another exception occurred:\n",
+      "\u001b[31mKeyboardInterrupt\u001b[39m                         Traceback (most recent call last)",
+      "\u001b[36mCell\u001b[39m\u001b[36m \u001b[39m\u001b[32mIn[4]\u001b[39m\u001b[32m, line 7\u001b[39m\n\u001b[32m      4\u001b[39m \u001b[38;5;66;03m# Set up model directory environment variable\u001b[39;00m\n\u001b[32m      5\u001b[39m MODEL_DIR = \u001b[33mf\u001b[39m\u001b[33m\"\u001b[39m\u001b[38;5;132;01m{\u001b[39;00mBASE_DIR\u001b[38;5;132;01m}\u001b[39;00m\u001b[33m/NeMo-RL/results/sft_deepseek_8b_trial_step_300/step_50\u001b[39m\u001b[33m\"\u001b[39m\n\u001b[32m----> \u001b[39m\u001b[32m7\u001b[39m \u001b[43msubprocess\u001b[49m\u001b[43m.\u001b[49m\u001b[43mrun\u001b[49m\u001b[43m(\u001b[49m\u001b[43m[\u001b[49m\u001b[33;43m'\u001b[39;49m\u001b[33;43muv\u001b[39;49m\u001b[33;43m'\u001b[39;49m\u001b[43m,\u001b[49m\u001b[43m \u001b[49m\u001b[33;43m'\u001b[39;49m\u001b[33;43mrun\u001b[39;49m\u001b[33;43m'\u001b[39;49m\u001b[43m,\u001b[49m\u001b[43m \u001b[49m\u001b[33;43m'\u001b[39;49m\u001b[33;43mpython\u001b[39;49m\u001b[33;43m'\u001b[39;49m\u001b[43m,\u001b[49m\u001b[43m \u001b[49m\u001b[33;43m'\u001b[39;49m\u001b[33;43mexamples/run_sft.py\u001b[39;49m\u001b[33;43m'\u001b[39;49m\u001b[43m,\u001b[49m\u001b[43m \u001b[49m\n\u001b[32m      8\u001b[39m \u001b[43m                \u001b[49m\u001b[33;43m'\u001b[39;49m\u001b[33;43m--config\u001b[39;49m\u001b[33;43m'\u001b[39;49m\u001b[43m,\u001b[49m\u001b[43m \u001b[49m\u001b[33;43mf\u001b[39;49m\u001b[33;43m\"\u001b[39;49m\u001b[38;5;132;43;01m{\u001b[39;49;00m\u001b[43mBASE_DIR\u001b[49m\u001b[38;5;132;43;01m}\u001b[39;49;00m\u001b[33;43m/gtc_paris/deepseek_sft.yaml\u001b[39;49m\u001b[33;43m\"\u001b[39;49m\n\u001b[32m      9\u001b[39m \u001b[43m               \u001b[49m\u001b[43m]\u001b[49m\u001b[43m,\u001b[49m\u001b[43m \u001b[49m\n\u001b[32m     10\u001b[39m \u001b[43m               \u001b[49m\u001b[43menv\u001b[49m\u001b[43m=\u001b[49m\u001b[43m{\u001b[49m\u001b[43m*\u001b[49m\u001b[43m*\u001b[49m\u001b[43mos\u001b[49m\u001b[43m.\u001b[49m\u001b[43menviron\u001b[49m\u001b[43m,\u001b[49m\u001b[43m \u001b[49m\u001b[33;43m'\u001b[39;49m\u001b[33;43mTMPDIR\u001b[39;49m\u001b[33;43m'\u001b[39;49m\u001b[43m:\u001b[49m\u001b[43m \u001b[49m\u001b[43mos\u001b[49m\u001b[43m.\u001b[49m\u001b[43menviron\u001b[49m\u001b[43m[\u001b[49m\u001b[33;43m'\u001b[39;49m\u001b[33;43mRAY_TMPDIR\u001b[39;49m\u001b[33;43m'\u001b[39;49m\u001b[43m]\u001b[49m\u001b[43m}\u001b[49m\u001b[43m,\u001b[49m\n\u001b[32m     11\u001b[39m \u001b[43m               \u001b[49m\u001b[43mstdout\u001b[49m\u001b[43m=\u001b[49m\u001b[38;5;28;43mopen\u001b[39;49m\u001b[43m(\u001b[49m\u001b[33;43mf\u001b[39;49m\u001b[33;43m\"\u001b[39;49m\u001b[38;5;132;43;01m{\u001b[39;49;00m\u001b[43mMODEL_DIR\u001b[49m\u001b[38;5;132;43;01m}\u001b[39;49;00m\u001b[33;43m/sft.log\u001b[39;49m\u001b[33;43m\"\u001b[39;49m\u001b[43m,\u001b[49m\u001b[43m \u001b[49m\u001b[33;43m'\u001b[39;49m\u001b[33;43mw\u001b[39;49m\u001b[33;43m'\u001b[39;49m\u001b[43m)\u001b[49m\u001b[43m,\u001b[49m\n\u001b[32m     12\u001b[39m \u001b[43m               \u001b[49m\u001b[43mcheck\u001b[49m\u001b[43m=\u001b[49m\u001b[38;5;28;43;01mTrue\u001b[39;49;00m\u001b[43m)\u001b[49m\n",
+      "\u001b[36mFile \u001b[39m\u001b[32m/usr/lib/python3.12/subprocess.py:550\u001b[39m, in \u001b[36mrun\u001b[39m\u001b[34m(input, capture_output, timeout, check, *popenargs, **kwargs)\u001b[39m\n\u001b[32m    548\u001b[39m \u001b[38;5;28;01mwith\u001b[39;00m Popen(*popenargs, **kwargs) \u001b[38;5;28;01mas\u001b[39;00m process:\n\u001b[32m    549\u001b[39m     \u001b[38;5;28;01mtry\u001b[39;00m:\n\u001b[32m--> \u001b[39m\u001b[32m550\u001b[39m         stdout, stderr = \u001b[43mprocess\u001b[49m\u001b[43m.\u001b[49m\u001b[43mcommunicate\u001b[49m\u001b[43m(\u001b[49m\u001b[38;5;28;43minput\u001b[39;49m\u001b[43m,\u001b[49m\u001b[43m \u001b[49m\u001b[43mtimeout\u001b[49m\u001b[43m=\u001b[49m\u001b[43mtimeout\u001b[49m\u001b[43m)\u001b[49m\n\u001b[32m    551\u001b[39m     \u001b[38;5;28;01mexcept\u001b[39;00m TimeoutExpired \u001b[38;5;28;01mas\u001b[39;00m exc:\n\u001b[32m    552\u001b[39m         process.kill()\n",
+      "\u001b[36mFile \u001b[39m\u001b[32m/usr/lib/python3.12/subprocess.py:1201\u001b[39m, in \u001b[36mPopen.communicate\u001b[39m\u001b[34m(self, input, timeout)\u001b[39m\n\u001b[32m   1199\u001b[39m         stderr = \u001b[38;5;28mself\u001b[39m.stderr.read()\n\u001b[32m   1200\u001b[39m         \u001b[38;5;28mself\u001b[39m.stderr.close()\n\u001b[32m-> \u001b[39m\u001b[32m1201\u001b[39m     \u001b[38;5;28;43mself\u001b[39;49m\u001b[43m.\u001b[49m\u001b[43mwait\u001b[49m\u001b[43m(\u001b[49m\u001b[43m)\u001b[49m\n\u001b[32m   1202\u001b[39m \u001b[38;5;28;01melse\u001b[39;00m:\n\u001b[32m   1203\u001b[39m     \u001b[38;5;28;01mif\u001b[39;00m timeout \u001b[38;5;129;01mis\u001b[39;00m \u001b[38;5;129;01mnot\u001b[39;00m \u001b[38;5;28;01mNone\u001b[39;00m:\n",
+      "\u001b[36mFile \u001b[39m\u001b[32m/usr/lib/python3.12/subprocess.py:1277\u001b[39m, in \u001b[36mPopen.wait\u001b[39m\u001b[34m(self, timeout)\u001b[39m\n\u001b[32m   1275\u001b[39m \u001b[38;5;28mself\u001b[39m._sigint_wait_secs = \u001b[32m0\u001b[39m  \u001b[38;5;66;03m# nothing else should wait.\u001b[39;00m\n\u001b[32m   1276\u001b[39m \u001b[38;5;28;01mtry\u001b[39;00m:\n\u001b[32m-> \u001b[39m\u001b[32m1277\u001b[39m     \u001b[38;5;28;43mself\u001b[39;49m\u001b[43m.\u001b[49m\u001b[43m_wait\u001b[49m\u001b[43m(\u001b[49m\u001b[43mtimeout\u001b[49m\u001b[43m=\u001b[49m\u001b[43msigint_timeout\u001b[49m\u001b[43m)\u001b[49m\n\u001b[32m   1278\u001b[39m \u001b[38;5;28;01mexcept\u001b[39;00m TimeoutExpired:\n\u001b[32m   1279\u001b[39m     \u001b[38;5;28;01mpass\u001b[39;00m\n",
+      "\u001b[36mFile \u001b[39m\u001b[32m/usr/lib/python3.12/subprocess.py:2047\u001b[39m, in \u001b[36mPopen._wait\u001b[39m\u001b[34m(self, timeout)\u001b[39m\n\u001b[32m   2045\u001b[39m             \u001b[38;5;28;01mraise\u001b[39;00m TimeoutExpired(\u001b[38;5;28mself\u001b[39m.args, timeout)\n\u001b[32m   2046\u001b[39m         delay = \u001b[38;5;28mmin\u001b[39m(delay * \u001b[32m2\u001b[39m, remaining, \u001b[32m.05\u001b[39m)\n\u001b[32m-> \u001b[39m\u001b[32m2047\u001b[39m         \u001b[43mtime\u001b[49m\u001b[43m.\u001b[49m\u001b[43msleep\u001b[49m\u001b[43m(\u001b[49m\u001b[43mdelay\u001b[49m\u001b[43m)\u001b[49m\n\u001b[32m   2048\u001b[39m \u001b[38;5;28;01melse\u001b[39;00m:\n\u001b[32m   2049\u001b[39m     \u001b[38;5;28;01mwhile\u001b[39;00m \u001b[38;5;28mself\u001b[39m.returncode \u001b[38;5;129;01mis\u001b[39;00m \u001b[38;5;28;01mNone\u001b[39;00m:\n",
+      "\u001b[31mKeyboardInterrupt\u001b[39m: "
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "Traceback (most recent call last):\n",
+      "  File \"/lustre/fsw/portfolios/llmservice/users/ahazare/NeMo-RL/examples/run_sft.py\", line 22, in <module>\n",
+      "    from transformers import AutoTokenizer\n",
+      "  File \"/lustre/fsw/portfolios/llmservice/users/ahazare/NeMo-RL/.venv/lib/python3.12/site-packages/transformers/__init__.py\", line 26, in <module>\n",
+      "    from . import dependency_versions_check\n",
+      "  File \"/lustre/fsw/portfolios/llmservice/users/ahazare/NeMo-RL/.venv/lib/python3.12/site-packages/transformers/dependency_versions_check.py\", line 16, in <module>\n",
+      "    from .utils.versions import require_version, require_version_core\n",
+      "  File \"/lustre/fsw/portfolios/llmservice/users/ahazare/NeMo-RL/.venv/lib/python3.12/site-packages/transformers/utils/__init__.py\", line 25, in <module>\n",
+      "    from .chat_template_utils import DocstringParsingException, TypeHintParsingException, get_json_schema\n",
+      "  File \"/lustre/fsw/portfolios/llmservice/users/ahazare/NeMo-RL/.venv/lib/python3.12/site-packages/transformers/utils/chat_template_utils.py\", line 40, in <module>\n",
+      "    from torch import Tensor\n",
+      "  File \"/lustre/fsw/portfolios/llmservice/users/ahazare/NeMo-RL/.venv/lib/python3.12/site-packages/torch/__init__.py\", line 405, in <module>\n",
+      "    from torch._C import *  # noqa: F403\n",
+      "    ^^^^^^^^^^^^^^^^^^^^^^\n",
+      "  File \"<frozen importlib._bootstrap>\", line 463, in _lock_unlock_module\n",
+      "KeyboardInterrupt\n"
+     ]
+    }
+   ],
+   "source": [
+    "# 6. Run SFT\n",
+    "print(\"Running SFT...\")\n",
+    "os.chdir(f\"{BASE_DIR}/NeMo-RL\")\n",
+    "# Set up model directory environment variable\n",
+    "MODEL_DIR = f\"{BASE_DIR}/NeMo-RL/results/sft_deepseek_8b_trial_step_300/step_50\"\n",
+    "\n",
+    "subprocess.run(['uv', 'run', 'python', 'examples/run_sft.py', \n",
+    "                '--config', f\"{BASE_DIR}/gtc_paris/deepseek_sft.yaml\"\n",
+    "               ], \n",
+    "               env={**os.environ, 'TMPDIR': os.environ['RAY_TMPDIR']},\n",
+    "               stdout=open(f\"{MODEL_DIR}/sft.log\", 'w'),\n",
+    "               check=True)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "0975a1e3-0223-44a7-bbf0-c4d2a2954c22",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "a57c51b6-5765-49ec-bb1d-69d58527c234",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Converting checkpoint...\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "\u001b[1m\u001b[33mwarning\u001b[39m\u001b[0m\u001b[1m:\u001b[0m \u001b[1m`VIRTUAL_ENV=/lustre/fsw/portfolios/llmservice/users/ahazare/penv3` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead\u001b[0m\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "tokenizer_name_or_path: deepseek-ai/deepseek-r1-distill-llama-8b\n",
+      "Saved HF checkpoint to: /lustre/fsw/portfolios/llmservice/users/ahazare/NeMo-RL/results/sft_deepseek_8b_trial_step_300/step_50/hf_ckpt\n",
+      "Conversion successful!\n",
+      "The HuggingFace model is now available at: /lustre/fsw/portfolios/llmservice/users/ahazare/NeMo-RL/results/sft_deepseek_8b_trial_step_300/step_50/hf_ckpt\n"
+     ]
+    }
+   ],
+   "source": [
+    "# 7. Convert checkpoint\n",
+    "MODEL_DIR = f\"{BASE_DIR}/NeMo-RL/results/sft_deepseek_8b_trial_step_300/step_50\"\n",
+    "DCP_CKPT_PATH = f\"{MODEL_DIR}/policy/weights/\"\n",
+    "CONFIG_PATH = f\"{MODEL_DIR}/config.yaml\"\n",
+    "HF_CKPT_PATH = f\"{MODEL_DIR}/hf_ckpt\"\n",
+    "\n",
+    "print(\"Converting checkpoint...\")\n",
+    "os.chdir(f\"{BASE_DIR}/NeMo-RL\")\n",
+    "subprocess.run([\n",
+    "    'uv', 'run', 'examples/convert_dcp_to_hf.py',\n",
+    "    '--config', CONFIG_PATH,\n",
+    "    '--dcp-ckpt-path', DCP_CKPT_PATH,\n",
+    "    '--hf-ckpt-path', HF_CKPT_PATH\n",
+    "], check=True)\n",
+    "\n",
+    "# Verify conversion\n",
+    "if Path(f\"{HF_CKPT_PATH}/pytorch_model.bin\").exists() and Path(f\"{HF_CKPT_PATH}/config.json\").exists():\n",
+    "    print(\"Conversion successful!\")\n",
+    "    print(f\"The HuggingFace model is now available at: {HF_CKPT_PATH}\")\n",
+    "else:\n",
+    "    print(\"Conversion may have failed. Please check the output.\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "0668672c-5419-4f63-b7eb-0918b5261132",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "422ab918-5125-4239-8c2e-076797859ce9",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "8d82a515-2a5a-4037-8096-d3aa6b2e1a8e",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python (penv3)",
+   "language": "python",
+   "name": "penv3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.12.3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

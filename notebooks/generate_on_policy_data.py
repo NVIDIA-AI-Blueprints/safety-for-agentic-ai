@@ -16,12 +16,13 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler(f'logs/generation_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'),
+        logging.FileHandler(f'workspace/training/logs/generation_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'),
         logging.StreamHandler()
     ]
 )
 
 # Default configuration
+# TODO: Move to notebook and remove HF_TOKEN
 DEFAULT_CONFIG = {
     'generation_model': "deepseek-ai/DeepSeek-R1-Distill-Llama-8B",
     'safety_model': "nvidia/llama-3.1-nemoguard-8b-content-safety",
