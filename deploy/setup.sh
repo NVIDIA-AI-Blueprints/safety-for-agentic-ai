@@ -1,4 +1,6 @@
-pip install nvidia-safety-harness
+# NeMo Eval
+pip install nvidia-safety-harness==0.0.dev0+1741db0a  --index-url https://gitlab-master.nvidia.com/api/v4/projects/153108/packages/pypi/simple
+#pip install nvidia-safety-harness
 pip install nvidia-simple-evals
 pip install nvidia-lm-eval
 pip install nvidia-bfcl
