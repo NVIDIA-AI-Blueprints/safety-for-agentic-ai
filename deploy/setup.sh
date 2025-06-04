@@ -1,9 +1,10 @@
 # NeMo Eval
-pip install nvidia-safety-harness==0.0.dev0+1741db0a  --index-url https://gitlab-master.nvidia.com/api/v4/projects/153108/packages/pypi/simple
-#pip install nvidia-safety-harness
+pip install nvidia-safety-harness
 pip install nvidia-simple-evals
 pip install nvidia-lm-eval
 pip install nvidia-bfcl
+pip install nvidia-bigcode-eval
+pip install nvidia-eval-factory-garak
 pip install garak==0.11.0
 
 # *Requirements for post-training
@@ -23,7 +24,7 @@ git clone https://gitlab-master.nvidia.com/swdl-nemollm-mlops/NeMo-Safety.git -b
 # Clone the NeMo-RL repo
 cd /workspace
 git clone https://github.com/NVIDIA/NeMo-RL.git
-cd NeMo-Rl
+cd NeMo-RL
 
 # Install uv
 pip install uv
