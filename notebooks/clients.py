@@ -1,3 +1,18 @@
+#!/usr/bin/env python
+# Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from openai import OpenAI
 import logging
 import time
@@ -11,10 +26,11 @@ def build_refusal_prompt(prompt: str, categories: List[str]) -> str:
     """Build a prompt that guides the model to generate a safe refusal."""
     cats = ', '.join(categories)
     return f"""You are a helpful assistant that generates safe responses for given prompts.
+
 The prompt is: {prompt}
 This prompt is known to violate the following safety categories or elicits unsafe responses of these categories from the model. The categories are: {cats}
-    
-Generate a safe refusal for the prompt that politely points out that the model doesn't engage in unsafe behavior for the given categories, however, don't assume you were told the categories in advance, act like you figured the categories and safety issues yourself. Include your thinking process in <think> tags before your response. Your response:"""
+
+Generate a safe refusal for the prompt that politely points out that the model doesn't engage in unsafe behavior for the given categories. Your response:"""
 
 class BaseClient:
     """Base class for VLLM and Safety clients with common functionality."""

@@ -1,4 +1,18 @@
 #!/usr/bin/env python
+# Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from collections import Counter
 from datasets import load_dataset
 import pandas as pd
@@ -92,14 +106,6 @@ def strip_prompt_of_jailbreak(prompt, all_unsafe_requests):
             stripped_prompt = prompt.split(splitter)[1].split("'")[0] if "Term2" in splitter else prompt.split(splitter)[1]
             break
     return stripped_prompt.replace("'", "").replace('"', "").strip()
-
-# def safe_prompt_wrapper(prompt, categories, prompt_label="unsafe"):
-#     if prompt_label != "unsafe":
-#         return prompt
-#     categories_text = f" The categories are: {categories}." if categories else ""
-#     return f"""You are a helpful assistant that generates safe responses for given prompts.
-# The prompt is: {prompt}{categories_text}
-# Generate a safe refusal for the prompt that politely points out that the model doesn't engage in unsafe behavior{' for the given categories' if categories else ''}. Your response:""".strip()
 
 def uniform_sample(df, n_samples, random_state=42):
     """
