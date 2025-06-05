@@ -5,8 +5,12 @@ services:
     build:
       dockerfile_inline: |
         FROM nvcr.io/nvidia/nemo:25.04
+        # TODO: Uncomment this directory
+        # RUN git clone https://github.com/NVIDIA-AI-Blueprints/nemo-safety.git
+        # Install all required Python packages
         RUN pip install \
-            nvidia-simple-evals \
+            nvidia-simple-evals==25.5 \
+            nvidia-safety-harness==25.5 \
             garak==0.11.0 \
             'huggingface_hub[cli]'==0.32.4 \
             vllm>=0.8.5 \
@@ -17,12 +21,14 @@ services:
             torchdata>=0.10.0 \
             ray>=2.42.0 \
             uv>=0.7.0
-       
+            # nvidia-lm-eval
+            # nvidia-bfcl
         # Clone and setup NeMo-RL
         RUN mkdir -p /workspace && cd /workspace && git clone https://github.com/NVIDIA/NeMo-RL.git && \
             cd NeMo-RL && git checkout 0fee015f03fa959b04a236fb656e4e5f8548e277 && \
             uv sync
-    
+
+    # image: nvcr.io/nvidia/nemo:25.04
     pull_policy: always
     ulimits:
       memlock: -1
