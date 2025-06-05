@@ -364,4 +364,4 @@ if __name__ == "__main__":
     
     # Run Garak evaluation
     run_garak_probes(target_probes=TARGET_PROBES, report_dir=report_dir, conf_dir=conf_dir, log_dir=log_dir, max_workers=args.max_workers)
-    create_csv(reports_root=report_dir, output_csv=os.path.join(args.output_basedir, "garak_results.csv"))
+    create_csv(reports_root=report_dir, output_csv=os.path.join(report_dir, "garak_results.csv"))
