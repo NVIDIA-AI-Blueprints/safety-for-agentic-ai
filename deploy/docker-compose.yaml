@@ -41,6 +41,8 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+    volumes:
+      - /ephemeral:/ephemeral
     ports:
       - "0.0.0.0:8888:8888"      # JupyterLab
     user: root
