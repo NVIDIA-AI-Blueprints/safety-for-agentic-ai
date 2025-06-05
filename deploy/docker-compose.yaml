@@ -49,3 +49,5 @@ services:
     working_dir: /ephemeral/workspace
     command: python -m jupyter lab --allow-root --ip=0.0.0.0 --no-browser --NotebookApp.token='' --NotebookApp.password='' # --notebook-dir=/ephemeral/workspace
     restart: unless-stopped
+    environment:
+      - API_KEY="YOUR_NGC_KEY"
