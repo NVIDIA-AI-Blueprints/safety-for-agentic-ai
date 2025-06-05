@@ -89,8 +89,6 @@ FIXME add arch diagram.
 - A [personal NVIDIA API key](https://org.ngc.nvidia.com/setup/api-keys) with the `NGC catalog` and `Public API Endpoints` services selected.
 - A [Hugging Face token](https://huggingface.co/settings/tokens) so that you can download models and datasets from the hub.
 
-Refer to the [setup script](./deploy/setup.sh) to install key software components and dependencies.
-
 ### Hardware Requirements
 
 One machine that meets the following requirements:
