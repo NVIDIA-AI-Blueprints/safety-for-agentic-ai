@@ -10,7 +10,8 @@ services:
         # RUN git clone https://github.com/NVIDIA-AI-Blueprints/nemo-safety.git
         # Install all required Python packages
         RUN pip install \
-            nvidia-simple-evals \
+            nvidia-simple-evals==25.5 \
+            nvidia-safety-harness==25.5 \
             garak==0.11.0 \
             'huggingface_hub[cli]'==0.32.4 \
             vllm>=0.8.5 \
