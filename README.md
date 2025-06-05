@@ -73,7 +73,8 @@ FIXME add arch diagram.
 - [Aegis AI Content Safety Dataset 2.0](https://huggingface.co/datasets/nvidia/Aegis-AI-Content-Safety-Dataset-2.0)
 - [Gretel Synthetic Safety Alignment Dataset](https://huggingface.co/datasets/gretelai/gretel-safety-alignment-en-v1)
 - [HarmfulTasks](https://github.com/CrystalEye42/eval-safety)
-- [RedTeam 2k](https://huggingface.co/datasets/JailbreakV-28K/JailBreakV-28k)
+- [JailbreakV-28K/JailBreakV-28k](https://huggingface.co/datasets/JailbreakV-28K/JailBreakV-28k)
+- [allenai/wildguardmix](https://huggingface.co/datasets/allenai/wildguardmix)
 - [Llama Nemotron Post Training Dataset](https://huggingface.co/datasets/nvidia/Llama-Nemotron-Post-Training-Dataset)
 
 ### Target Audience
