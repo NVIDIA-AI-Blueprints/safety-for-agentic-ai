@@ -41,7 +41,7 @@ logging.basicConfig(
 DEFAULT_CONFIG = {
     'generation_model': "deepseek-ai/DeepSeek-R1-Distill-Llama-8B",
     'safety_model': "nvidia/llama-3.1-nemoguard-8b-content-safety",
-    'huggingface_token': "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",
+    'huggingface_token': os.getenv("HF_TOKEN", ""),
     'output_dir': "generated_data",
     'batch_size': 4,
     'max_tokens': 512,
