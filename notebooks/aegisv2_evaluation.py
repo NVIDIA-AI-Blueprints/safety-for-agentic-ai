@@ -48,7 +48,7 @@ def main(base_dir):
     response_column = "model_output"
     end_of_thought_token = "</think>"
 
-    tokenizer = AutoTokenizer.from_pretrained("/lustre/fsw/portfolios/llmservice/users/vinitas/llama-3.1-nemoguard-8b-content-safety")
+    tokenizer = AutoTokenizer.from_pretrained("meta-llama/Meta-Llama-3.1-8B-Instruct")
 
     if df[response_column].str.contains(end_of_thought_token).any():
         df = process_reasoning_traces(df, response_column=response_column)
