@@ -1,0 +1,80 @@
+import os
+import json 
+import argparse
+import pandas as pd
+from collections import Counter
+from pandarallel import pandarallel
+from utils import moderate_chat_with_nim, parse_aegis_v2_response, parse_aegis_v2_response_categories
+from transformers import AutoTokenizer
+from tqdm.notebook import tqdm
+from typing import Tuple, List
+
+def process_reasoning_traces(df, response_column="model_output", end_of_thought_token="</think>"):
+    df[response_column + "_no_think"] = ""
+    df.loc[df[response_column].str.contains(end_of_thought_token), response_column + "_no_think"] = df.loc[df[response_column].str.contains(end_of_thought_token), response_column].apply(lambda x: x.split(end_of_thought_token)[1].strip())
+    df.loc[~df[response_column].str.contains(end_of_thought_token), response_column + "_no_think"] = df.loc[~df[response_column].str.contains(end_of_thought_token), response_column].apply(lambda x: x)
+    assert len(df[df[response_column + "_no_think"] == ""]) == 0
+    return df
+    
+def main(base_dir):
+    df = pd.read_csv(f"{base_dir}/output.csv")
+
+    prompt_column = "prompt"
+    response_column = "model_output"
+    end_of_thought_token = "</think>"
+
+    class Args:
+        prompt_format_type = "aegis_v2"
+        model_name = "llama-3.1-nemoguard-8b-content-safety"
+        host = "localhost"
+        port = 6000
+
+        def __init__(self, prompt_format_type, judge_model_name, judge_url, judge_url_port):
+            self.prompt_format_type = prompt_format_type
+            self.model_name = judge_model_name
+            self.host = judge_url
+            self.port = judge_url_port
+
+    inference_args = Args(
+        prompt_format_type="aegis_v2",
+        judge_model_name="llama-3.1-nemoguard-8b-content-safety",
+        judge_url="localhost",
+        judge_url_port=6000
+    )
+
+    tqdm.pandas()
+
+    prompt_column = "prompt"
+    response_column = "model_output"
+    end_of_thought_token = "</think>"
+
+    tokenizer = AutoTokenizer.from_pretrained("/lustre/fsw/portfolios/llmservice/users/vinitas/llama-3.1-nemoguard-8b-content-safety")
+
+    if df[response_column].str.contains(end_of_thought_token).any():
+        df = process_reasoning_traces(df, response_column=response_column)
+        response_column = response_column + "_no_think"
+
+    pandarallel.initialize(nb_workers=20, progress_bar=True)
+
+    df[f"aegis_v2_safety_generation"] = df.parallel_apply(
+        lambda x: moderate_chat_with_nim(x[prompt_column], x[response_column], tokenizer=tokenizer, args=inference_args), axis=1
+    )
+
+    df["aegis_v2_response_safety"] = df["aegis_v2_safety_generation"].apply(parse_aegis_v2_response)
+    df["aegis_v2_response_safety_categories"] = df["aegis_v2_safety_generation"].apply(parse_aegis_v2_response_categories)
+
+    df.to_csv(f"{base_dir}/final_output.csv", index=False)
+
+    d = {k: int(v) for k, v in df["aegis_v2_response_safety"].value_counts().items()}
+    with open(f"{base_dir}/final_metrics.json", 'w') as f:
+        json.dump(d, f, indent=4)
+
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input_file", type=str, default=f"{os.getcwd()}/output.csv")
+    args = parser.parse_args()
+
+    base_dir = os.path.dirname(args.input_file)
+    main(base_dir)
