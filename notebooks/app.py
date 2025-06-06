@@ -188,7 +188,7 @@ def main():
 
             results_dir = st.text_input(
                 "Original Model Path",
-                "results/DeepSeek-R1-Distill-Llama-8B"
+                "workspace/results/DeepSeek-R1-Distill-Llama-8B"
             )
 
             # Comparison toggle
@@ -197,7 +197,7 @@ def main():
             if enable_comparison:
                 comparison_dir = st.text_input(
                     "Post-trained Model Path",
-                    "results/DeepSeek-R1-Distill-Llama-8B_pt"
+                    "workspace/results/DeepSeek-R1-Distill-Llama-8B-Safety-Trained"
                 )
                 if comparison_dir:
                     st.caption(f"Comparing with: {Path(comparison_dir).name}")
