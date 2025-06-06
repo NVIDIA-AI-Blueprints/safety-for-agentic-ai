@@ -44,7 +44,7 @@ services:
               capabilities: [gpu]
     ports:
       - "0.0.0.0:8888:8888" # JupyterLab
-      - "0.0.0.0:8501:8501" # Streamlint
+      - "0.0.0.0:8501:8501" # Streamlit
     user: root
     working_dir: /ephemeral/workspace/
     volumes:
