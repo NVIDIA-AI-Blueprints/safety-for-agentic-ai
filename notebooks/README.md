@@ -5,6 +5,7 @@ This repository hosts the following three notebooks to walk you through the core
 - [Notebook 1]() Safety and Accuracy Evaluation using NeMo Eval
 - [Notebook 2]() Safety Post-training using NeMo Safety’s training recipe 
 - [Notebook 3]() Re-running the same safety and accuracy evaluation to understand how the model has improved
+- [Notebook 4]() Model Safety Repord Card
 
 The notebooks assume that the user has 8x H100 80GB GPUs or similar computational resources. You can use [NVIDIA Brev](https://developer.nvidia.com/brev) to launch an instance. 
 
