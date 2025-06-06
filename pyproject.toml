@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "nemo-safety"
+version = "0.1.0"
+description = "Safety evaluation environment using NeMo, garak, wildguard, and other tools"
+authors = ["Your Name <you@example.com>"]
+packages = [{ include = "nemo_safety" }]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.12"
+nvidia-simple-evals = "25.5"
+nvidia-safety-harness = "25.5"
+# nvidia-bigcode-eval = "25.5"
+# nvidia-lm-eval = "25.5"
+# nvidia-bfcl = "25.5"
+garak = "0.11.0"
+huggingface_hub = { version = ">=0.32.4", extras = ["cli"] }
+vllm = ">=0.8.5"
+datasets = ">=3.4.1"
+wildguard = "1.0.1"
+protobuf = ">=3.20"
+wandb = ">=0.16.6"
+torchdata = ">=0.10.0"
+ray = ">=2.42.0"
+uv = ">=0.7.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
