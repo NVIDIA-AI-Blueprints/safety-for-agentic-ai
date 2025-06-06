@@ -13,7 +13,7 @@ services:
             nvidia-safety-harness==25.5 \
             garak==0.11.0 \
             'huggingface_hub[cli]'==0.32.4 \
-            vllm>=0.8.5 \
+            vllm>=0.7.3 \
             datasets>=3.4.1  \
             wildguard==1.0.1 \
             protobuf>=3.20 \
