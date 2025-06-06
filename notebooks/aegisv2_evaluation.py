@@ -16,8 +16,11 @@ def process_reasoning_traces(df, response_column="model_output", end_of_thought_
     assert len(df[df[response_column + "_no_think"] == ""]) == 0
     return df
     
-def main(base_dir):
-    df = pd.read_csv(f"{base_dir}/output.csv")
+def main(input_file):
+    df = pd.read_csv(input_file)
+    base_dir = os.path.dirname(input_file)
+    if 'Response Safety 0' in df.columns:
+        df.drop(columns=['Response Safety 0', 'Safety Categories 0'], inplace=True)
 
     prompt_column = "prompt"
     response_column = "model_output"
@@ -48,7 +51,8 @@ def main(base_dir):
     response_column = "model_output"
     end_of_thought_token = "</think>"
 
-    tokenizer = AutoTokenizer.from_pretrained("meta-llama/Meta-Llama-3.1-8B-Instruct")
+    # tokenizer = AutoTokenizer.from_pretrained("meta-llama/Meta-Llama-3.1-8B-Instruct")
+    tokenizer = AutoTokenizer.from_pretrained("/lustre/fsw/portfolios/llmservice/users/vinitas/llama-3.1-nemoguard-8b-content-safety")
 
     if df[response_column].str.contains(end_of_thought_token).any():
         df = process_reasoning_traces(df, response_column=response_column)
@@ -60,21 +64,20 @@ def main(base_dir):
         lambda x: moderate_chat_with_nim(x[prompt_column], x[response_column], tokenizer=tokenizer, args=inference_args), axis=1
     )
 
-    df["aegis_v2_response_safety"] = df["aegis_v2_safety_generation"].apply(parse_aegis_v2_response)
-    df["aegis_v2_response_safety_categories"] = df["aegis_v2_safety_generation"].apply(parse_aegis_v2_response_categories)
+    df["Response Safety 0"] = df["aegis_v2_safety_generation"].apply(parse_aegis_v2_response)
+    df["Safety Categories 0"] = df["aegis_v2_safety_generation"].apply(parse_aegis_v2_response_categories)
 
-    df.to_csv(f"{base_dir}/final_output.csv", index=False)
+    df.to_csv(f"{base_dir}/output.csv", index=False)
 
-    d = {k: int(v) for k, v in df["aegis_v2_response_safety"].value_counts().items()}
-    with open(f"{base_dir}/final_metrics.json", 'w') as f:
+    d = {k: int(v) for k, v in df["Response Safety 0"].value_counts().items()}
+    with open(f"{base_dir}/metrics.json", 'w') as f:
         json.dump(d, f, indent=4)
 
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input_file", type=str, default=f"{os.getcwd()}/output.csv")
+    parser.add_argument("--input_file", type=str, required=True)
     args = parser.parse_args()
 
-    base_dir = os.path.dirname(args.input_file)
-    main(base_dir)
+    main(args.input_file)
