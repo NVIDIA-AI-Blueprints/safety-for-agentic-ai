@@ -20,7 +20,8 @@ services:
             wandb>=0.16.6 \
             torchdata>=0.10.0 \
             ray>=2.42.0 \
-            uv>=0.7.0
+            uv>=0.7.0 \
+            streamlit>=1.45.1
             # nvidia-lm-eval
             # nvidia-bfcl
         # Clone and setup NeMo-RL
@@ -42,7 +43,8 @@ services:
               count: all
               capabilities: [gpu]
     ports:
-      - "0.0.0.0:8888:8888"      # JupyterLab
+      - "0.0.0.0:8888:8888" # JupyterLab
+      - "0.0.0.0:8501:8501" # Streamlint
     user: root
     working_dir: /ephemeral/workspace/
     volumes:
