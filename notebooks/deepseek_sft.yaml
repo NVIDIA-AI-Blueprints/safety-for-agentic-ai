@@ -1,4 +1,5 @@
 # SFT Algorithm Configuration
+workdir: /ephemeral/workspace/NeMo-Safety/notebooks
 sft:
   ## total number of steps to train will equal
   ## min((max_num_epochs * len(train_dataloader)), max_num_steps)
@@ -14,7 +15,7 @@ sft:
 
 checkpointing:
   enabled: true
-  checkpoint_dir: "./workspace/training/results/DeepSeek-R1-Distill-Llama-8B"
+  checkpoint_dir: ${workdir}/workspace/training/results/DeepSeek-R1-Distill-Llama-8B
   metric_name: "val_loss"
   higher_is_better: false
   keep_top_k: 3
@@ -79,8 +80,8 @@ policy:
 data:
   max_input_seq_length: ${policy.max_total_sequence_length}
   dataset_name: "prompt_response_dataset"
-  train_data_path: "./workspace/training/dataset_cache/sft_data/train_on_policy_data.jsonl"
-  val_data_path: "./workspace/training/dataset_cache/sft_data/val_on_policy_data.jsonl"
+  train_data_path: ${workdir}/workspace/training/dataset_cache/sft_data/train_on_policy_data.jsonl
+  val_data_path: ${workdir}/workspace/training/dataset_cache/sft_data/val_on_policy_data.jsonl
   input_key: "input"
   output_key: "generated_output"
   add_bos: true
