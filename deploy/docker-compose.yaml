@@ -20,7 +20,8 @@ services:
             wandb>=0.16.6 \
             torchdata>=0.10.0 \
             ray>=2.42.0 \
-            uv>=0.7.0
+            uv>=0.7.0 \
+            pandarallel==1.6.5
             # streamlit>=1.45.1 # causes error
             # nvidia-lm-eval
             # nvidia-bfcl
