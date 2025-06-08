@@ -1,12 +1,12 @@
 # SFT Algorithm Configuration
-workdir: /ephemeral/workspace/NeMo-Safety/notebooks
+workdir: /ephemeral/workspace/safety-for-agentic-ai/notebooks
 sft:
   ## total number of steps to train will equal
   ## min((max_num_epochs * len(train_dataloader)), max_num_steps)
   max_num_epochs: 1
-  max_num_steps: 300
+  max_num_steps: 60
 
-  val_period: 25
+  val_period: 20
   val_batches: 8  
   val_global_batch_size: 16
   val_micro_batch_size: 1
@@ -18,8 +18,8 @@ checkpointing:
   checkpoint_dir: ${workdir}/workspace/training/results/DeepSeek-R1-Distill-Llama-8B
   metric_name: "val_loss"
   higher_is_better: false
-  keep_top_k: 3
-  save_period: 25
+  keep_top_k: 1
+  save_period: 20
 
 policy:
   model_name: "deepseek-ai/DeepSeek-R1-Distill-Llama-8B"
@@ -29,7 +29,7 @@ policy:
     # The tokenizer will use its default template from the config
   train_global_batch_size: 16
   train_micro_batch_size: 1
-  max_total_sequence_length: 4096 # 8192  # Increased from 2048 to 8192
+  max_total_sequence_length: 8192 # 8192  # Increased from 2048 to 8192
   precision: "bfloat16"
   fsdp_offload_enabled: false
   activation_checkpointing_enabled: false
@@ -70,12 +70,12 @@ policy:
       kwargs:
         start_factor: 0.1
         end_factor: 1.0
-        total_iters: 100  # Warmup steps
+        total_iters: 20  # Warmup steps
     - name: "torch.optim.lr_scheduler.CosineAnnealingLR"
       kwargs:
-        T_max: 300  # (Total steps - warmup steps)
+        T_max: 60  # (Total steps - warmup steps)
         eta_min: 5.0e-8  # Minimum LR
-    - milestones: [100]  # Switch from warmup to cosine at step 100
+    - milestones: [20]  # Switch from warmup to cosine at step 100
 
 data:
   max_input_seq_length: ${policy.max_total_sequence_length}
@@ -94,7 +94,7 @@ logger:
   tensorboard_enabled: true
   monitor_gpus: false  # If true, will monitor GPU usage and log to wandb and/or tensorboard
   wandb:
-    project: "NeMo-Safety"
+    project: "Safety-for-Agentic-AI"
     name: "safety-training-deepseek-distill-8b-llama"
   tensorboard:
     log_dir: "safety-training-deepseek-distill-8b-llama"

@@ -67,7 +67,7 @@ def print_token_statistics(stats: Dict[str, Dict], total_samples: int, skipped_s
         print(f"  Samples skipped: {source_stats['skipped']} ({source_stats['skipped']/source_stats['total']:.1%})")
 
 def combine_datasets(
-    safety_file: str = "nv_safety_sampled.jsonl",
+    safety_file: str = "safety_sampled.jsonl",
     llama_nemo_dir: str = ".",
     output_dir: str = ".",
     val_split: float = 0.03,

@@ -286,48 +286,48 @@ def main():
 
     # Combine all datasets
     print("\nCombining datasets...")
-    nemo_safety_blended_prompts = pd.concat([aegis_df, gretel_df, harmful_tasks_df, redteam_2k_filtered])
-    nemo_safety_blended_prompts = nemo_safety_blended_prompts.drop_duplicates(subset=["prompt"]).reset_index(drop=True)
-    nemo_safety_blended_prompts.loc[nemo_safety_blended_prompts["prompt_without_jailbreak"].isna(), "prompt_without_jailbreak"] = nemo_safety_blended_prompts["prompt"]
-    nemo_safety_blended_prompts = nemo_safety_blended_prompts[FINAL_COLUMNS]
+    safety_blended_prompts = pd.concat([aegis_df, gretel_df, harmful_tasks_df, redteam_2k_filtered])
+    safety_blended_prompts = safety_blended_prompts.drop_duplicates(subset=["prompt"]).reset_index(drop=True)
+    safety_blended_prompts.loc[safety_blended_prompts["prompt_without_jailbreak"].isna(), "prompt_without_jailbreak"] = safety_blended_prompts["prompt"]
+    safety_blended_prompts = safety_blended_prompts[FINAL_COLUMNS]
     
     # Print original distribution
-    print_dataset_distribution(nemo_safety_blended_prompts, "Original Dataset Distribution")
+    print_dataset_distribution(safety_blended_prompts, "Original Dataset Distribution")
     
     # Save full dataset
     print(f"\nSaving full dataset to {args.filename}...")
     with open(args.filename, 'w', encoding='utf-8') as f:
-        for _, row in nemo_safety_blended_prompts.iterrows():
+        for _, row in safety_blended_prompts.iterrows():
             f.write(json.dumps(row.to_dict(), ensure_ascii=False) + '\n')
-    print(f'Full dataset saved with {len(nemo_safety_blended_prompts):,} samples')
+    print(f'Full dataset saved with {len(safety_blended_prompts):,} samples')
     
     # Sample if total_samples is specified
     if args.total_samples is not None:
-        original_df = nemo_safety_blended_prompts.copy()
+        original_df = safety_blended_prompts.copy()
         if args.sampling_method == "uniform":
-            nemo_safety_blended_prompts = uniform_sample(nemo_safety_blended_prompts, args.total_samples)
+            safety_blended_prompts = uniform_sample(safety_blended_prompts, args.total_samples)
         else:  # stratified sampling
-            nemo_safety_blended_prompts = stratified_sample(nemo_safety_blended_prompts, args.total_samples)
+            safety_blended_prompts = stratified_sample(safety_blended_prompts, args.total_samples)
         
         # Print sampling report
         print("\nSampling Report")
         print("="*80)
         print(f"Original dataset size: {len(original_df):,}")
-        print(f"Sampled dataset size: {len(nemo_safety_blended_prompts):,}")
-        print(f"Sampling ratio: {(len(nemo_safety_blended_prompts) / len(original_df) * 100):.2f}%")
+        print(f"Sampled dataset size: {len(safety_blended_prompts):,}")
+        print(f"Sampling ratio: {(len(safety_blended_prompts) / len(original_df) * 100):.2f}%")
         print(f"Sampling method: {args.sampling_method}")
         print("="*80)
         
         # Print sampled distribution
-        print_dataset_distribution(nemo_safety_blended_prompts, "Sampled Dataset Distribution")
+        print_dataset_distribution(safety_blended_prompts, "Sampled Dataset Distribution")
         
         # Save sampled dataset
         sampled_filename = args.filename.replace('.jsonl', f'_sampled_{args.total_samples}_{args.sampling_method}.jsonl')
         print(f"\nSaving sampled dataset to {sampled_filename}")
         with open(sampled_filename, 'w', encoding='utf-8') as f:
-            for _, row in nemo_safety_blended_prompts.iterrows():
+            for _, row in safety_blended_prompts.iterrows():
                 f.write(json.dumps(row.to_dict(), ensure_ascii=False) + '\n')
-        print(f'Sampled dataset saved with {len(nemo_safety_blended_prompts):,} samples')
+        print(f'Sampled dataset saved with {len(safety_blended_prompts):,} samples')
     
     end_time = time.time()
     print(f"\nTotal processing time: {end_time - start_time:.2f} seconds")
