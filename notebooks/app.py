@@ -291,8 +291,8 @@ def main():
         avg_content_score = np.mean([v['score'] for v in content_scores.values()])
         if comparison_model:
             comp_content_score = np.mean([v['score'] for v in comparison_content_scores.values()])
-            delta = avg_content_score - comp_content_score
-            st.metric("Avg Content Safety", f"{avg_content_score:.1f}%", f"{delta:+.1f}%")
+            delta = comp_content_score - avg_content_score
+            st.metric("Avg Content Safety", f"{comp_content_score:.1f}%", f"{delta:+.1f}%")
         else:
             st.metric("Avg Content Safety", f"{avg_content_score:.1f}%")
 
@@ -300,8 +300,8 @@ def main():
         aegis_score = content_scores['aegis_v2']['score']
         if comparison_model:
             comp_aegis = comparison_content_scores['aegis_v2']['score']
-            delta = aegis_score - comp_aegis
-            st.metric("Aegis v2", f"{aegis_score:.1f}%", f"{delta:+.1f}%")
+            delta = comp_aegis - aegis_score
+            st.metric("Aegis v2", f"{comp_aegis:.1f}%", f"{delta:+.1f}%")
         else:
             st.metric("Aegis v2", f"{aegis_score:.1f}%")
 
@@ -309,8 +309,8 @@ def main():
         wildguard_score = content_scores['wildguard']['score']
         if comparison_model:
             comp_wildguard = comparison_content_scores['wildguard']['score']
-            delta = wildguard_score - comp_wildguard
-            st.metric("WildGuard", f"{wildguard_score:.1f}%", f"{delta:+.1f}%")
+            delta = comp_wildguard - wildguard_score
+            st.metric("WildGuard", f"{comp_wildguard:.1f}%", f"{delta:+.1f}%")
         else:
             st.metric("WildGuard", f"{wildguard_score:.1f}%")
 
@@ -318,8 +318,8 @@ def main():
         resilience = garak_results['resilience']
         if comparison_model:
             comp_resilience = comparison_garak_results['resilience']
-            delta = resilience - comp_resilience
-            st.metric("Security Resilience", f"{resilience:.1f}%", f"{delta:+.1f}%")
+            delta = comp_resilience - resilience
+            st.metric("Security Resilience", f"{comp_resilience:.1f}%", f"{delta:+.1f}%")
         else:
             st.metric("Security Resilience", f"{resilience:.1f}%")
 
@@ -378,7 +378,7 @@ def main():
                     metrics_df = metrics_df.merge(comp_metrics, on="Dataset")
                     # Add improvement column
                     metrics_df['Improvement'] = [
-                        f"{float(row['Score'].rstrip('%')) - float(row['Post-trained-Safe Score'].rstrip('%')):.1f}%"
+                        f"{float(row['Post-trained-Safe Score'].rstrip('%')) - float(row['Score'].rstrip('%')):.1f}%"
                         for _, row in metrics_df.iterrows()
                     ]
                 st.dataframe(metrics_df, hide_index=True, use_container_width=True)
@@ -416,7 +416,7 @@ def main():
                 comp_excellent = len([p for p in comparison_garak_results['probes'].values() if p['label'] == 'excellent'])
                 comp_total = len(comparison_garak_results['probes'])
                 comp_excellent_pct = (comp_excellent / comp_total * 100) if comp_total > 0 else 0
-                delta = excellent_pct - comp_excellent_pct
+                delta = comp_excellent_pct - excellent_pct
                 st.metric("Excellent Probes", f"{excellent_pct:.1f}%", f"{delta:+.1f}%")
             else:
                 st.metric("Excellent Probes", f"{excellent_pct:.1f}%")
@@ -426,7 +426,7 @@ def main():
             if comparison_model:
                 comp_competitive = len([p for p in comparison_garak_results['probes'].values() if p['label'] == 'competitive'])
                 comp_competitive_pct = (comp_competitive / comp_total * 100) if comp_total > 0 else 0
-                delta = competitive_pct - comp_competitive_pct
+                delta = comp_competitive_pct - competitive_pct
                 st.metric("Competitive Probes", f"{competitive_pct:.1f}%", f"{delta:+.1f}%")
             else:
                 st.metric("Competitive Probes", f"{competitive_pct:.1f}%")
@@ -446,7 +446,7 @@ def main():
                         comp_data = comparison_garak_results['probes'][probe_name]
                         detail["Post-trained-Safe Pass Rate"] = f"{comp_data['pass_rate']:.1f}%"
                         detail["Post-trained-Safe Status"] = comp_data['label'].title()
-                        detail["Improvement"] = f"{probe_data['pass_rate'] - comp_data['pass_rate']:.1f}%"
+                        detail["Improvement"] = f"{comp_data['pass_rate'] - probe_data['pass_rate']:.1f}%"
                     garak_details.append(detail)
                 garak_df = pd.DataFrame(garak_details).sort_values('Pass Rate', ascending=False)
                 st.dataframe(garak_df, hide_index=True, use_container_width=True)
@@ -477,7 +477,7 @@ def main():
             with col1:
                 if comparison_model and comparison_accuracy_scores:
                     comp_avg = np.mean(list(comparison_accuracy_scores.values()))
-                    delta = avg_accuracy - comp_avg
+                    delta = comp_avg - avg_accuracy
                     st.metric("Average Accuracy", f"{avg_accuracy:.1f}%", f"{delta:+.1f}%")
                 else:
                     st.metric("Average Accuracy", f"{avg_accuracy:.1f}%")
@@ -485,7 +485,7 @@ def main():
             with col2:
                 if comparison_model and comparison_accuracy_scores:
                     comp_max = max(comparison_accuracy_scores.values())
-                    delta = max_accuracy - comp_max
+                    delta = comp_max - max_accuracy
                     st.metric("Best Performance", f"{max_accuracy:.1f}%", f"{delta:+.1f}%")
                 else:
                     st.metric("Best Performance", f"{max_accuracy:.1f}%")
@@ -493,7 +493,7 @@ def main():
             with col3:
                 if comparison_model and comparison_accuracy_scores:
                     comp_min = min(comparison_accuracy_scores.values())
-                    delta = min_accuracy - comp_min
+                    delta = comp_min - min_accuracy
                     st.metric("Lowest Performance", f"{min_accuracy:.1f}%", f"{delta:+.1f}%")
                 else:
                     st.metric("Lowest Performance", f"{min_accuracy:.1f}%")
@@ -517,7 +517,7 @@ def main():
                         if comparison_model and dataset in comparison_accuracy_scores:
                             comp_score = comparison_accuracy_scores[dataset]
                             detail["Post-trained-Safe Score"] = f"{comp_score:.1f}%"
-                            detail["Improvement"] = f"{score - comp_score:.1f}%"
+                            detail["Improvement"] = f"{comp_score - score:.1f}%"
                         acc_details.append(detail)
                     acc_df = pd.DataFrame(acc_details).sort_values('Score', ascending=False)
                     st.dataframe(acc_df, hide_index=True, use_container_width=True)
@@ -642,7 +642,7 @@ def main():
                     "Performance Rating": category,
                     "Open Model": performance_counts[category],
                     "Post-trained-Safe Model": comp_counts[category],
-                    "Change": performance_counts[category] - comp_counts[category]
+                    "Change": comp_counts[category] - performance_counts[category]
                 })
             table_df = pd.DataFrame(table_data)
         else:

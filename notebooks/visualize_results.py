@@ -96,7 +96,7 @@ class SafetyReportCard:
     def read_garak_results(self):
         """Read Garak security evaluation results"""
         # Read garak_scores.csv from the security-evals directory
-        garak_scores_path = self.results_dir / 'security-evals/garak/reports/garak_scores.csv'
+        garak_scores_path = self.results_dir / 'security-evals/garak/reports/garak_results.csv'
         # print(f'garak_scores_path: {garak_scores_path}')
 
         try:
@@ -250,7 +250,7 @@ class SafetyReportCard:
             plt.text(x[0] + width/2, comp_scores[0], f'{comp_scores[0]:.1f}%', ha='center', va='bottom')
 
             # Add delta
-            delta = current_score - comp_score
+            delta = comp_score - current_score
             color = 'green' if delta > 0 else 'red'
             plt.text(0, max(current_score, comp_score) + 2, f'{delta:+.1f}%', ha='center', color=color, fontweight='bold')
         else:
@@ -295,7 +295,7 @@ class SafetyReportCard:
             plt.text(x[0] + width/2, comp_scores[0], f'{comp_scores[0]:.1f}%', ha='center', va='bottom')
 
             # Add delta
-            delta = current_score - comp_score
+            delta = comp_score - current_score
             color = 'green' if delta > 0 else 'red'
             plt.text(0, max(current_score, comp_score) + 2, f'{delta:+.1f}%', ha='center', color=color, fontweight='bold')
         else:
@@ -344,7 +344,7 @@ class SafetyReportCard:
                 plt.text(x[i] + width/2, comp + 0.5, f'{comp:.1f}%', ha='center', va='bottom')
 
                 # Add delta
-                delta = curr - comp
+                delta = comp - curr
                 color = 'green' if delta > 0 else 'red'
                 plt.text(x[i], max(curr, comp) + 3, f'{delta:+.1f}%', ha='center', color=color, fontweight='bold')
         else:
@@ -390,7 +390,7 @@ class SafetyReportCard:
             plt.text(x[0] + width/2, comp_scores[0], f'{comp_scores[0]:.1f}%', ha='center', va='bottom')
 
             # Add delta
-            delta = current_score - comp_score
+            delta = comp_score - current_score
             color = 'green' if delta > 0 else 'red'
             plt.text(0, max(current_score, comp_score) + 2, f'{delta:+.1f}%', ha='center', color=color, fontweight='bold')
         else:
@@ -435,7 +435,7 @@ class SafetyReportCard:
             plt.text(x[0] + width/2, comp_scores[0], f'{comp_scores[0]:.1f}%', ha='center', va='bottom')
 
             # Add delta
-            delta = current_resilience - comp_resilience
+            delta = comp_resilience - current_resilience
             color = 'green' if delta > 0 else 'red'
             plt.text(0, max(current_resilience, comp_resilience) + 2, f'{delta:+.1f}%', ha='center', color=color, fontweight='bold')
         else:
@@ -500,7 +500,7 @@ class SafetyReportCard:
 
                 # Add delta (only if space allows)
                 if num_datasets <= 8:
-                    delta = curr - comp
+                    delta = comp - curr
                     color = 'green' if delta > 0 else 'red'
                     plt.text(x[i], max(curr, comp) + 3, f'{delta:+.1f}%', ha='center',
                             color=color, fontweight='bold', fontsize=font_size)
