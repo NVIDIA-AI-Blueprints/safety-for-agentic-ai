@@ -1,0 +1,107 @@
+# SFT Algorithm Configuration
+workdir: /ephemeral
+sft:
+  ## total number of steps to train will equal
+  ## min((max_num_epochs * len(train_dataloader)), max_num_steps)
+  max_num_epochs: 1
+  max_num_steps: 40
+
+  val_period: 20
+  val_batches: 8
+  val_global_batch_size: 16
+  val_micro_batch_size: 1
+  val_at_start: true
+  seed: 42
+
+checkpointing:
+  enabled: true
+  checkpoint_dir: ${workdir}/workspace/training/results/DeepSeek-R1-Distill-Llama-8B
+  metric_name: "val_loss"
+  higher_is_better: false
+  keep_top_k: 3
+  save_period: 20
+
+policy:
+  model_name: "deepseek-ai/DeepSeek-R1-Distill-Llama-8B"
+  tokenizer:
+    name: ${policy.model_name} ## specify if you'd like to use a tokenizer different from the model's default
+    # We shouldn't need to set the chat template explicitly in this case
+    # The tokenizer will use its default template from the config
+  train_global_batch_size: 16
+  train_micro_batch_size: 1
+  max_total_sequence_length: 8192 # 8192  # Increased from 2048 to 8192
+  precision: "bfloat16"
+  fsdp_offload_enabled: false
+  activation_checkpointing_enabled: false
+
+  # Dynamic batching configuration
+  dynamic_batching:
+    enabled: false  # Disabled by default since we're using fixed batch sizes
+    max_batch_size: 16  # Matches train_global_batch_size
+    max_sequence_length: ${policy.max_total_sequence_length}
+
+  dtensor_cfg:
+    enabled: true
+    cpu_offload: false
+    sequence_parallel: false
+    activation_checkpointing: false
+    tensor_parallel_size: 1
+    custom_parallel_plan: null
+
+  # makes the training sequence length divisible by the tensor parallel size
+  # this is useful for sequence parallel training
+  make_sequence_length_divisible_by: ${policy.dtensor_cfg.tensor_parallel_size}
+  max_grad_norm: 1.0
+
+  optimizer:
+    name: "torch.optim.AdamW"
+    kwargs:
+      lr: 5.0e-7  # Gentler learning rate as requested
+      weight_decay: 0.01
+      betas: [0.9, 0.95]
+      eps: 1e-8
+      # when using Dtensor, we need to set foreach
+      # and fused to False
+      foreach: false
+      fused: false
+
+  scheduler:
+    - name: "torch.optim.lr_scheduler.LinearLR"
+      kwargs:
+        start_factor: 0.1
+        end_factor: 1.0
+        total_iters: 20  # Warmup steps
+    - name: "torch.optim.lr_scheduler.CosineAnnealingLR"
+      kwargs:
+        T_max: 60  # (Total steps - warmup steps)
+        eta_min: 5.0e-8  # Minimum LR
+    - milestones: [20]  # Switch from warmup to cosine at step 100
+
+data:
+  max_input_seq_length: ${policy.max_total_sequence_length}
+  dataset_name: "prompt_response_dataset"
+  train_data_path: ${workdir}/workspace/training/dataset_cache/sft_data/train_on_policy_data_filtered.jsonl
+  val_data_path: ${workdir}/workspace/training/dataset_cache/sft_data/val_on_policy_data_filtered.jsonl
+  input_key: "input"
+  output_key: "generated_output"
+  add_bos: true
+  add_eos: true
+  add_generation_prompt: true
+
+logger:
+  log_dir: "logs"  # Base directory for all logs
+  wandb_enabled: true # Make sure you do a ``wandb login [Your API key]'' before running
+  tensorboard_enabled: true
+  monitor_gpus: false  # If true, will monitor GPU usage and log to wandb and/or tensorboard
+  wandb:
+    project: "Safety-for-Agentic-AI"
+    name: "safety-training-deepseek-distill-8b-llama"
+  tensorboard:
+    log_dir: "safety-training-deepseek-distill-8b-llama"
+  gpu_monitoring:
+    collection_interval: 10  # How often to collect GPU usage metrics (in seconds)
+    flush_interval: 10  # How often to flush GPU usage metrics to the loggers (in seconds)
+
+cluster:
+  gpus_per_node: 8
+  num_nodes: 1

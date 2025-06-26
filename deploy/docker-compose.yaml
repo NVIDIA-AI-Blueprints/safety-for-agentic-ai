@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  nemo_safety:
+    build:
+      dockerfile_inline: |
+        FROM nvcr.io/nvidia/nemo:25.04
+        # TODO: Uncomment this directory
+        # RUN git clone https://github.com/NVIDIA-AI-Blueprints/nemo-safety.git
+        # Install all required Python packages
+        RUN pip install \            
+            nvidia-safety-harness==25.5 \
+            nvidia-simple-evals==25.5 \
+            garak==0.11.0 \
+            'huggingface_hub[cli]'==0.32.4 \
+            "vllm>=0.7.3" \
+            "datasets>=3.4.1"  \
+            wildguard==1.0.1 \
+            "protobuf>=3.20" \
+            "wandb>=0.16.6" \
+            "torchdata>=0.10.0" \
+            "ray>=2.42.0" \
+            "uv>=0.7.0" \
+            pandarallel==1.6.5
+            # nvidia-simple-evals==25.5
+            # streamlit>=1.45.1 # causes error
+            # nvidia-lm-eval
+            # nvidia-bfcl
+        # Clone and setup NeMo-RL
+        RUN mkdir -p /workspace && cd /workspace && git clone https://github.com/NVIDIA/NeMo-RL.git && \
+            cd NeMo-RL && git checkout 0fee015f03fa959b04a236fb656e4e5f8548e277 && \
+            uv sync
+
+    # image: nvcr.io/nvidia/nemo:25.04
+    pull_policy: always
+    ulimits:
+      memlock: -1
+      stack: 67108864
+    shm_size: 1g
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    ports:
+      - "0.0.0.0:8888:8888" # JupyterLab
+      - "0.0.0.0:8501:8501" # Streamlit
+    user: root
+    working_dir: /ephemeral/workspace/
+    volumes:
+      - /ephemeral:/ephemeral/
+    command: bash -c "cp -r /workspace /ephemeral/ && rm -rf /workspace && python -m jupyter lab --allow-root --ip=0.0.0.0 --no-browser --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.iopub_data_rate_limit=1.0e10"
+    restart: unless-stopped
+    environment:
+      - API_KEY="YOUR_NGC_KEY"
