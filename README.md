@@ -68,10 +68,11 @@ NVIDIA Safety for Agentic AI is broken down into four steps, which map to a typi
 **Third Party Software**
 
 - [vLLM](https://github.com/vllm-project/vllm)
-- [Hugging Face](http://huggingface_hub/transformers/datasets)
+- [HuggingFace](https://huggingface.co/docs/hub/en/datasets-overview)
 - [Weights & Biases](https://wandb.ai/site/)
 - [PyTorch](https://pytorch.org/)
 - [WildGuard](https://huggingface.co/allenai/wildguard)
+
 
 **Dataset Used**
 
@@ -110,10 +111,11 @@ Run the following notebooks:
 - [Fine-tuning for Safety and Accuracy](./notebooks/Step2_Safety_Post_Training.ipynb)
 - [Evaluating the Fine-tuned Model](./notebooks/Step3_Post_Training_Eval.ipynb)
 
+## Ethical Considerations
+NVIDIA believes Trustworthy AI is a shared responsibility, and we have established policies and practices to enable development for a wide array of AI applications. When downloaded or used in accordance with our terms of service, developers should work with their supporting model team to ensure the models meet requirements for the relevant industry and use case and address unforeseen product misuse. For more detailed information on ethical considerations for the models, please see the Model Card++, Explainability, Bias, Safety & Security, and Privacy Subcards. Please report security vulnerabilities or NVIDIA AI concerns [here](https://www.nvidia.com/en-us/support/submit-security-vulnerability/).
+
 ## License
+Use of this  developer example notebook  is governed by the Apache 2.0 License.
 
-This NVIDIA AI BLUEPRINT is licensed under the [Apache License, Version 2.0](./LICENSE).
-This project downloads and installs additional third-party open source software projects and containers.
-Review [the license terms of these open source projects](./LICENSE-3rd-party.txt) before use.
-
-The software and materials are governed by the NVIDIA Software License Agreement (found at https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-software-license-agreement/) and the Product-Specific Terms for NVIDIA AI Products (found at https://www.nvidia.com/en-us/agreements/enterprise-software/product-specific-terms-for-ai-products/).
+## Terms of Use
+The software and materials are governed by the [NVIDIA Software License Agreement](https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-software-license-agreement/) and the [Product-Specific Terms for NVIDIA AI Products](https://www.nvidia.com/en-us/agreements/enterprise-software/product-specific-terms-for-ai-products/), except that models are governed by the [AI Foundation Models Community License Agreement](https://docs.nvidia.com/ai-foundation-models-community-license.pdf) and the NVIDIA RAG dataset is governed by the [NVIDIA Asset License Agreement](https://github.com/NVIDIA-AI-Blueprints/rag/blob/main/data/LICENSE.DATA). ADDITIONAL INFORMATION: for Meta/llama-3.1-70b-instruct model, the Llama 3.1 Community License Agreement, for nvidia/llama-3.2-nv-embedqa-1b-v2 model, the Llama 3.2 Community License Agreement. Built with Llama.
