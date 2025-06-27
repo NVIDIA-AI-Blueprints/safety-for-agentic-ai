@@ -62,7 +62,7 @@ NVIDIA Safety for Agentic AI is broken down into four steps, which map to a typi
 - [NVIDIA NeMo Framework Eval](https://github.com/NVIDIA/NeMo) -  Scalable, cloud-native framework to create, customize, and deploy the latest AI models.
 - [NVIDIA NIM](https://docs.nvidia.com/nim/index.html) - Microservices for accelerating the deployment of foundation models agnostic of cloud or datacenter.
 - [NVIDIA NeMo Guardrails](https://github.com/NVIDIA/NeMo-Guardrails) - Programmable logic at inference runtime to safeguard agentic AI applications.
-- [NVIDIA NemoGuard Content Safety](https://huggingface.co/nvidia/llama-3.1-nemoguard-8b-content-safety) - Multilingual model that detects unsafe interactions between humans and LLMs.
+- [NVIDIA NemoGuard Content Safety](https://huggingface.co/nvidia/llama-3.1-nemoguard-8b-content-safety) - Model that detects unsafe interactions between humans and LLMs.
 - [NVIDIA Garak](https://github.com/NVIDIA/garak) - Open-source red teaming tool to scan vulnerabilities like hallucination, prompt injection, and jailbreaks.
 
 **Third Party Software**
