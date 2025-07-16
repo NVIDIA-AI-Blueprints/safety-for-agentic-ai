@@ -14,13 +14,13 @@ services:
               count: all
               capabilities: [gpu]
     environment:
-      - NIM_MODEL_NAME=/ephemeral/workspace/training/results/DeepSeek-R1-Distill-Llama-8B/DeepSeek-R1-Distill-Llama-8B-Safety-Trained-safetensors
+      - NIM_MODEL_NAME=/ephemeral/workspace/training/results/DeepSeek-R1-Distill-Llama-8B/DeepSeek-R1-Distill-Llama-8B-Safety-Trained
       - NIM_SERVED_MODEL_NAME=${NIM_SERVED_MODEL_NAME:-deepSeek-distilled-llama8b-safety-trained-nim}
       - NVIDIA_API_KEY=${NVIDIA_API_KEY}
     user: "${UID:-1000}:${GID:-1000}"
     volumes:
       - ~/.cache/nim:/opt/nim/.cache
-      - ${NIM_MODEL_PATH:-/ephemeral/workspace/training/results/DeepSeek-R1-Distill-Llama-8B/DeepSeek-R1-Distill-Llama-8B-Safety-Trained-safetensors}:/ephemeral/workspace/training/results/DeepSeek-R1-Distill-Llama-8B/DeepSeek-R1-Distill-Llama-8B-Safety-Trained-safetensors:ro  # Mount local model directory
+      - ${NIM_MODEL_PATH:-/ephemeral/workspace/training/results/DeepSeek-R1-Distill-Llama-8B/DeepSeek-R1-Distill-Llama-8B-Safety-Trained}:/ephemeral/workspace/training/results/DeepSeek-R1-Distill-Llama-8B/DeepSeek-R1-Distill-Llama-8B-Safety-Trained:ro  # Mount local model directory
     ports:
       - "8060:8000"
     shm_size: 16GB
