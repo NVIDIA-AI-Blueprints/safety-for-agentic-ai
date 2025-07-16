@@ -15,9 +15,31 @@ Deploy the hardened model as a trusted universal NIM and then add inference-time
 With continuous monitoring, auditability, and collaboration between AI and risk teams, model safety becomes enforceable, not aspirational.
 With Safety for Agentic AI, enterprises can now confidently adopt open models, aligned to their policy, and protected from model adoption, deployment, and inference runtime at production.
 
-For guidelines and suggestions about the process, refer to [Best Practices for Developing a Model Behavior Guide](./docs/best-practices-model-behavior-guide.md).
+For guidelines and suggestions about the process, refer to [Best Practices for Developing a Model Behavior Guide](https://github.com/NVIDIA-AI-Blueprints/safety-for-agentic-ai/blob/main/docs/best-practices-model-behavior-guide.md).
 
 This repository is what powers the [build experience](https://build.nvidia.com/nvidia/safety-for-agentic-ai), helping you harden security at every stage of the AI development lifecycle.
+
+You can deploy this blueprint in a ready-to-use hardware and software environment as a Brev _launchable_ by going to the [build experience](https://build.nvidia.com/nvidia/safety-for-agentic-ai) page and clicking **Deploy on Cloud**.
+Alternatively, refer to the [notebooks README](https://github.com/NVIDIA-AI-Blueprints/safety-for-agentic-ai/tree/main/notebooks#readme) for deployment instructions.
+
+## Contents
+
+<!-- TOC -->
+
+- [Contents](#contents)
+    - [Architecture](#architecture)
+    - [Key Features](#key-features)
+    - [Minimum System Requirements](#minimum-system-requirements)
+    - [Software Used in This Blueprint](#software-used-in-this-blueprint)
+    - [Target Audience](#target-audience)
+    - [Prerequisites](#prerequisites)
+    - [Hardware Requirements](#hardware-requirements)
+    - [Quickstart Guide](#quickstart-guide)
+- [Ethical Considerations](#ethical-considerations)
+- [License](#license)
+- [Terms of Use](#terms-of-use)
+
+<!-- /TOC -->
 
 ### Architecture
 
@@ -107,14 +129,19 @@ One machine that meets the following requirements:
 
 Run the following notebooks:
 
-- [Evaluating the Base Model for Safety and Accuracy](./notebooks/Step1_Evaluation.ipynb)
-- [Fine-tuning for Safety and Accuracy](./notebooks/Step2_Safety_Post_Training.ipynb)
-- [Evaluating the Fine-tuned Model](./notebooks/Step3_Post_Training_Eval.ipynb)
+- [Setup](https://github.com/NVIDIA-AI-Blueprints/safety-for-agentic-ai/blob/main/notebooks/Step0_Setup.ipynb)
+- [Evaluating the Base Model for Safety and Accuracy](https://github.com/NVIDIA-AI-Blueprints/safety-for-agentic-ai/blob/main/notebooks/Step1_Evaluation.ipynb)
+- [Fine-tuning for Safety and Accuracy](https://github.com/NVIDIA-AI-Blueprints/safety-for-agentic-ai/blob/main/notebooks/Step2_Safety_Post_Training.ipynb)
+- [Evaluating the Fine-tuned Model](https://github.com/NVIDIA-AI-Blueprints/safety-for-agentic-ai/blob/main/notebooks/Step3_Post_Training_Eval.ipynb)
+
+Optionally, you can [Run Inference with the Fine-Tuned Model and NeMo Guardrails](https://github.com/NVIDIA-AI-Blueprints/safety-for-agentic-ai/blob/main/notebooks/Step4_Run_Inference_with_NeMo_Guardrails_Docker.ipynb)
 
 ## Ethical Considerations
+
 NVIDIA believes Trustworthy AI is a shared responsibility, and we have established policies and practices to enable development for a wide array of AI applications. When downloaded or used in accordance with our terms of service, developers should work with their supporting model team to ensure the models meet requirements for the relevant industry and use case and address unforeseen product misuse. For more detailed information on ethical considerations for the models, please see the Model Card++, Explainability, Bias, Safety & Security, and Privacy Subcards. Please report security vulnerabilities or NVIDIA AI concerns [here](https://www.nvidia.com/en-us/support/submit-security-vulnerability/).
 
 ## License
+
 Use of this  developer example notebook  is governed by the Apache 2.0 License.
 
 ## Terms of Use

@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # LLM-agnostic NIM Service
+  llm-nim:
+    image: nvcr.io/nim/nvidia/llm-nim:latest
+    container_name: Llm-NIM
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    environment:
+      - NIM_MODEL_NAME=/ephemeral/workspace/training/results/DeepSeek-R1-Distill-Llama-8B/DeepSeek-R1-Distill-Llama-8B-Safety-Trained-safetensors
+      - NIM_SERVED_MODEL_NAME=${NIM_SERVED_MODEL_NAME:-deepSeek-distilled-llama8b-safety-trained-nim}
+      - NVIDIA_API_KEY=${NVIDIA_API_KEY}
+    user: "${UID:-1000}:${GID:-1000}"
+    volumes:
+      - ~/.cache/nim:/opt/nim/.cache
+      - ${NIM_MODEL_PATH:-/ephemeral/workspace/training/results/DeepSeek-R1-Distill-Llama-8B/DeepSeek-R1-Distill-Llama-8B-Safety-Trained-safetensors}:/ephemeral/workspace/training/results/DeepSeek-R1-Distill-Llama-8B/DeepSeek-R1-Distill-Llama-8B-Safety-Trained-safetensors:ro  # Mount local model directory
+    ports:
+      - "8060:8000"
+    shm_size: 16GB
+    networks:
+      - nemoguard-local
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8060/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # NeMo Guardrails Microservice
+  guardrails:
+    image: nvcr.io/nvidia/nemo-microservices/guardrails:25.04
+    container_name: guardrails
+    environment:
+      - DEMO=True
+      - NIM_ENDPOINT_URL=http://llm-nim:8000/v1
+    ports:
+      - "7331:7331"
+    networks:
+      - nemoguard-local
+    depends_on:
+      - llm-nim
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7331/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  nemoguard-local:
+    driver: bridge
+    name: nemoguard-local

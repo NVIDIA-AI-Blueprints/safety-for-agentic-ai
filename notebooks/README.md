@@ -1,14 +1,18 @@
 # Safety for Agentic AI: Developer Blueprint Notebooks
 
-This directory has four notebooks to walk you through the core features of adding safety to an open model:
+This directory has the following notebooks to walk you through the core features of adding safety to an open model:
 
 - [Set up the environment by configuring and installing required packages](./Step0_Setup.ipynb)
 - [Evaluate the base model for safety and accuracy using NeMo Eval](./Step1_Evaluation.ipynb)
 - [Post-train the base model to add content safety and preserve accuracy](./Step2_Safety_Post_Training.ipynb)
 - [Rerun the same safety and accuracy evaluation and view the model safety report card to see how the model has improved](./Step3_Post_Training_Eval.ipynb)
+- [Inference with NeMo Guardrails](./Step4_Run_Inference_with_NeMo_Guardrails_Docker.ipynb)
+    - To run the inference notebook, you must stop the NeMo Framework container that was used for the previous notebooks and start containers for NeMo Guardrails microservice and NIM for LLMs microservice. 
+    - Refer to [The Setup in the last section of this README.md](#set-up-for-running-inference-with-nemo-guardrails-and-llm-agnostic-nim) for more information.
+ 
 
 These notebooks were developed using 8 x H100 80GB GPUs.
-You must use the same or similar computational resources and follow the notebooks in sequential order (Step0->Step1->Step2->Step3).
+You must use the same or similar computational resources and follow the notebooks in sequential order (Step0->Step1->Step2->Step3->Step4).
 
 You can use [NVIDIA Brev](https://developer.nvidia.com/brev) to launch an 8 x H100 instance.
 
@@ -19,7 +23,13 @@ You will need to generate the following API keys:
 
 For post-training, you can optionally use [Weights & Biases](https://wandb.ai/home) for experiment tracking.
 
-## Set Up Using Brev
+## Using the Brev Launchable
+
+- Go to <https://build.nvidia.com/nvidia/safety-for-agentic-ai>.
+- Click **Deploy on Cloud** to go the launchable page on Brev.
+- Click **Deploy Launchable** to start an instance that can run the notebooks.
+
+## Manual Set Up Using Brev
 
 ### Download and Edit Docker Compose File
 
@@ -103,3 +113,24 @@ Starting an instance requires approximately 15 to 20 minutes.
 
    The notebooks are located in the `safety-for-agentic-ai/notebooks` directory.
    Continue the set up by running the `Step0_Setup.ipynb` notebook.
+
+2. The same `8888` port can be used to run the inference part of this Launchable. 
+
+### Set Up for running Inference with NeMo Guardrails and LLM Agnostic NIM
+
+1. To run inference on the post-trained model,
+   - First SSH into your Brev CLI following the instructions and commands on the Brev Console.
+   - Then shut down the running NeMo Framework container - 
+      ```
+      docker ps -a
+      docker stop <container-id>
+      ```
+   - Then do a docker login with your `NVIDIA_API_KEY` using `docker login nvcr.io`
+   - Run the `inference_setup.sh` with the following commands to shut down the running docker running on port `8888` and install `jupyterlab` and `docker-compose`
+   ```
+   cd /ephemeral/workspace/safety-for-agentic-ai/notebooks/scripts
+   chmod +x inference_setup.sh
+   ./inference_setup.sh
+   ```
+   - After you run the above setup script, go back to Brev server port `8888` and refresh to find the new jupyter server. 
+   - Once there is no running docker services, now you can start working with the [Inference Notebook](./Step4_Run_Inference_with_NeMo_Guardrails_Docker.ipynb)
