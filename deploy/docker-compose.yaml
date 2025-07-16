@@ -1,17 +1,16 @@
 version: '3.8'
 
 services:
-  nemo_safety:
+  safety_for_agentic_ai:
     build:
       dockerfile_inline: |
         FROM nvcr.io/nvidia/nemo:25.04
-        # TODO: Uncomment this directory
-        # RUN git clone https://github.com/NVIDIA-AI-Blueprints/nemo-safety.git
+        RUN git clone https://github.com/NVIDIA-AI-Blueprints/safety-for-agentic-ai.git
         # Install all required Python packages
         RUN pip install \            
             nvidia-safety-harness==25.5 \
             nvidia-simple-evals==25.5 \
-            garak==0.11.0 \
+            garak==0.12.0 \
             'huggingface_hub[cli]'==0.32.4 \
             "vllm>=0.7.3" \
             "datasets>=3.4.1"  \
