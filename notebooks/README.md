@@ -9,6 +9,7 @@ This directory has the following notebooks to walk you through the core features
 - [Inference with NeMo Guardrails](./Step4_Run_Inference_with_NeMo_Guardrails_Docker.ipynb)
     - To run the inference notebook, you must stop the NeMo Framework container that was used for the previous notebooks and start containers for NeMo Guardrails microservice and NIM for LLMs microservice. 
     - Refer to [The Setup in the last section of this README.md](#set-up-for-running-inference-with-nemo-guardrails-and-llm-agnostic-nim) for more information.
+    - Once you start working with the [Inference Notebook](./Step4_Run_Inference_with_NeMo_Guardrails_Docker.ipynb), you will not be able to re-visit or run any of the previous notebooks. In order to do so, you need to again shut down the running docker services and start the nemo framework container. Follow the steps [to restart the NeMo Framework Services](#restarting-the-nemo-framework-docker-after-stopping)
  
 
 These notebooks were developed using 8 x H100 80GB GPUs.
@@ -118,19 +119,58 @@ Starting an instance requires approximately 15 to 20 minutes.
 
 ### Set Up for running Inference with NeMo Guardrails and LLM Agnostic NIM
 
-1. To run inference on the post-trained model,
-   - First SSH into your Brev CLI following the instructions and commands on the Brev Console.
-   - Then shut down the running NeMo Framework container - 
-      ```
-      docker ps -a
-      docker stop <container-id>
-      ```
-   - Then do a docker login with your `NVIDIA_API_KEY` using `docker login nvcr.io`
-   - Run the `inference_setup.sh` with the following commands to shut down the running docker running on port `8888` and install `jupyterlab` and `docker-compose`
+**NOTE : The instructions in this section are necessary for following Notebook 4, which covers running inference after deploying the fine-tuned checkpoint from Notebook 2.**
+
+1. To run inference on the post-trained model, first SSH into your Brev CLI following the instructions and commands on the Brev Console.
+
+2. Then shut down the running NeMo Framework container - 
    ```
-   cd /ephemeral/workspace/safety-for-agentic-ai/notebooks/scripts
+   docker ps -a
+   docker stop <container-id>
+   ```
+
+3. Run the `inference_setup.sh` in the `safety-for-agentic-ai/notebooks/scripts` with the following commands to shut down the running docker running on port `8888` and install `jupyterlab` and `docker-compose`
+
+   ```
    chmod +x inference_setup.sh
    ./inference_setup.sh
    ```
-   - After you run the above setup script, go back to Brev server port `8888` and refresh to find the new jupyter server. 
-   - Once there is no running docker services, now you can start working with the [Inference Notebook](./Step4_Run_Inference_with_NeMo_Guardrails_Docker.ipynb)
+
+4. After you run the above setup script, go back to the Jupyterlab instance running on port `8888` and refresh the page.
+
+5. Once there is no running docker services, now you can start working with the [Inference Notebook](./Step4_Run_Inference_with_NeMo_Guardrails_Docker.ipynb)
+   - Remember to follow the steps in the notebook to do a docker login with your `NVIDIA_API_KEY` using `docker login nvcr.io` on the terminal of the jupyterlab server
+
+### Restarting the NeMo Framework Docker After Stopping
+
+1. You can view the stopped NeMo Framework Docker service in the list of images by running the following command:
+
+```
+docker image ls
+```
+This should output the following:
+
+```
+REPOSITORY              TAG       IMAGE ID       CREATED      SIZE
+workspace-nemo_safety   latest    aaf7ca33db2c   9 days ago   79.7GB
+
+```
+2. Run the following docker command to restart the initial docker container
+
+```
+docker run -it --rm \
+  --gpus all \
+  --ulimit memlock=-1 \
+  --ulimit stack=67108864 \
+  --shm-size=1g \
+  -p 8888:8888 \
+  -p 8501:8501 \
+  -u root \
+  -v /ephemeral:/ephemeral \
+  -w /ephemeral/workspace/ \
+  workspace-nemo_safety:latest \
+  bash -c "python -m jupyter lab --allow-root --ip=0.0.0.0 --no-browser --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.iopub_data_rate_limit=1.0e10"
+
+```
+
+3. You should now be able to re-visit Notebooks 0–3.
