@@ -36,7 +36,7 @@ services:
 
   # NeMo Guardrails Microservice
   guardrails:
-    image: nvcr.io/nvidia/nemo-microservices/guardrails:25.04
+    image: nvcr.io/nvidia/nemo-microservices/guardrails:25.06
     container_name: guardrails
     environment:
       - DEMO=True
