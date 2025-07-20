@@ -11,7 +11,7 @@ MLOps teams, lacking proactive safety tooling, are forced to patch issues reacti
 NVIDIA Safety for Agentic AI offers a structured recipe to evaluate and align open models early, enabling increased safety, security, and compliant agentic workflows.
 Start with model evaluation using Garak vulnerability scanning with curated risk prompts, benchmarking against enterprise thresholds.
 Afterward, post-train using recipes and safety datasets to close critical safety and security gaps.
-Deploy the hardened model as a trusted universal NIM and then add inference-time safety protection with [NVIDIA NeMo Guardrails](https://developer.nvidia.com/nemo-guardrails/) that actively block unsafe behavior.
+Deploy the hardened model with NVIDIA LLM-agnostic NIM and then add inference-time safety protection with [NVIDIA NeMo Guardrails](https://developer.nvidia.com/nemo-guardrails/) that actively block unsafe behavior.
 With continuous monitoring, auditability, and collaboration between AI and risk teams, model safety becomes enforceable, not aspirational.
 With Safety for Agentic AI, enterprises can now confidently adopt open models, aligned to their policy, and protected from model adoption, deployment, and inference runtime at production.
 
@@ -47,7 +47,7 @@ NVIDIA Safety for Agentic AI is broken down into four steps, which map to a typi
 
 - Safety, security and accuracy evaluation of any model.
 - Post-training with NVIDIA curated datasets.
-- Deploying a trusted model as a universal NIM.
+- Deploying a trusted model with NVIDIA LLM-agnostic NIM.
 - Running a trusted model with NVIDIA NeMo Guardrails for run-time guardrails.
 
 ![](https://assets.ngc.nvidia.com/products/api-catalog/safety-for-agentic-ai/diagram.jpg)
@@ -59,7 +59,7 @@ NVIDIA Safety for Agentic AI is broken down into four steps, which map to a typi
 - Dataset blend with 4 datasets and on-policy prompt generation with the target model.
 - Post-training (SFT) with NeMo Framework RL.
 - Easy-to-understand safety and security reports.
-- Packaging and deploying the trusted model with Universal NIM.
+- Packaging and deploying the trusted model with NVIDIA LLM-agnostic NIM.
 - Integrating the Topic Control NIM with NeMo Guardrails for inference-time safety.
 
 ### Minimum System Requirements
