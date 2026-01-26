@@ -2,8 +2,6 @@
 
 >Deprecation: This blueprint is no longer actively maintained as of April 22, 2026.  We recommend using NeMo Microservices instead: NeMo Auditor for pre-deployment vulnerability scanning, NeMo Guardrails for runtime safety protection, and Safe Synthesizer for safe training data generation.
 
->Deprecation: This blueprint is no longer actively maintained as of April 22, 2026.  We recommend using NeMo Microservices instead: NeMo Auditor for pre-deployment vulnerability scanning, NeMo Guardrails for runtime safety protection, and Safe Synthesizer for safe training data generation.
-
 ### About Safety for Agentic AI
 
 As large language models (LLMs) increasingly enable agentic AI systems capable of autonomous reasoning and tool use, they also introduce critical safety risks, including goal misalignment, hallucinations, and prompt injections.
