@@ -49,7 +49,7 @@ class CustomLLM(LLM):
                 },
             )
             if response.status_code != 200:
-                raise Exception(f"Failed to get a legitimate from LLM. Status code: {response.status_code} {response.text}")
+                raise Exception(f"Failed to get a legitimate response from LLM. Status code: {response.status_code} {response.text}")
             return response.json()["choices"][0]["text"]
         except Exception as e:
             print(f"Error: {e}")
